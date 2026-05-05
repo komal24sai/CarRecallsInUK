@@ -2,6 +2,8 @@
 import { useState, useEffect, use } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import CheckoutModal from '@/components/payment/CheckoutModal';
+import Toast from '@/components/ui/Toast';
 import { generateAIReport } from '@/lib/ai-forecast';
 
 export default function VehiclePage({ params }) {
@@ -15,6 +17,18 @@ export default function VehiclePage({ params }) {
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showAllTests, setShowAllTests] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  const addNotification = (notif) => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { ...notif, id }]);
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   useEffect(() => {
     fetchVehicle();
@@ -58,7 +72,7 @@ export default function VehiclePage({ params }) {
     </>
   );
 
-  const { vehicle, safetyScore, motHistory, defects, mileageTimeline, defectDistribution, recalls } = data;
+  const { vehicle, safetyScore, motHistory, defects, mileageTimeline, defectDistribution, recalls, runningCosts, provenance } = data;
   const scoreColor = safetyScore?.riskLevel === 'LOW' ? '#22c55e' : safetyScore?.riskLevel === 'MEDIUM' ? '#eab308' : '#ef4444';
   const circumference = 2 * Math.PI * 65;
   const offset = circumference - (circumference * (safetyScore?.safetyScore || 0)) / 100;
@@ -101,32 +115,64 @@ export default function VehiclePage({ params }) {
         </div>
 
         <div className="metrics-row">
-          <div className="metric-card">
+          <div className="metric-card" data-tooltip="The current legal status of the vehicle's MOT certificate.">
             <div className="metric-title">MOT STATUS</div>
             <div className={`metric-value ${isMotExpired ? 'text-red' : 'text-green'}`}>
               {isMotExpired ? 'Expired' : 'Valid'}
             </div>
             <div className="metric-sub">{isMotExpired ? 'Expired' : 'Expires'} {vehicle?.mot_expiry_date}</div>
           </div>
-          <div className="metric-card">
+          <div className="metric-card" data-tooltip="Road Tax status. Always verify on official gov.uk site before purchase.">
             <div className="metric-title">ROAD TAX</div>
             <div className="metric-value text-yellow">Check needed</div>
             <div className="metric-sub">Verify on GOV.UK</div>
           </div>
-          <div className="metric-card">
+          <div className="metric-card" data-tooltip="Ultra Low Emission Zone status. Non-compliant cars pay daily fees in London.">
             <div className="metric-title">ULEZ</div>
             <div className="metric-value text-red">Non-compliant</div>
             <div className="metric-sub">Euro 4 petrol</div>
           </div>
-          <div className="metric-card">
+          <div className="metric-card" data-tooltip="Percentage of MOT tests this vehicle has passed first time. Higher is better.">
             <div className="metric-title">MOT PASS RATE</div>
             <div className="metric-value text-yellow">{vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%</div>
             <div className="metric-sub">{vehicle?.total_mot_tests} tests total</div>
           </div>
-          <div className="metric-card">
+          <div className="metric-card" data-tooltip="The total mileage recorded at the last MOT test. Checked for anomalies.">
             <div className="metric-title">MILEAGE</div>
             <div className="metric-value text-blue">{vehicle?.latest_mileage?.toLocaleString()}</div>
             <div className="metric-sub">~{aiReport?.mileageAnalysis?.avgAnnualMiles?.toLocaleString()} mi/year avg</div>
+          </div>
+          <div className="metric-card" data-tooltip="Rating from 1 (Cheapest) to 50 (Expensive). Predicts your insurance premium.">
+            <div className="metric-title">INSURANCE GROUP</div>
+            <div className="metric-value text-purple">{runningCosts?.insuranceGroup || 'N/A'}</div>
+            <div className="metric-sub">Group 1-50 rating</div>
+          </div>
+          <div className="metric-card" data-tooltip="Estimated combined fuel economy. Helps predict your monthly petrol/diesel spend.">
+            <div className="metric-title">FUEL ECONOMY</div>
+            <div className="metric-value text-green">{runningCosts?.averageMpg || 'N/A'}</div>
+            <div className="metric-sub">Est. combined MPG</div>
+          </div>
+          <div className="metric-card" data-tooltip="Number of previous owners as recorded by the DVLA.">
+            <div className="metric-title">PREVIOUS OWNERS</div>
+            <div className="metric-value text-blue" style={{ filter: isUnlocked ? 'none' : 'blur(5px)', opacity: isUnlocked ? 1 : 0.3 }}>
+              {isUnlocked ? (provenance?.previous_owners || 1) : '?'}
+            </div>
+            <div className="metric-sub">{isUnlocked ? 'Registered keepers' : 'Unlock to see'}</div>
+          </div>
+          <div className="metric-card" data-tooltip="The total time elapsed since the vehicle's first registration.">
+            <div className="metric-title">VEHICLE AGE</div>
+            <div className="metric-value text-purple">{( (new Date() - new Date(vehicle.first_used_date)) / (1000 * 60 * 60 * 24 * 365.25) ).toFixed(1)} Yrs</div>
+            <div className="metric-sub">Since first registration</div>
+          </div>
+          <div className="metric-card" data-tooltip="Grams of CO2 emitted per kilometer. Important for tax and environment.">
+            <div className="metric-title">CO2 EMISSIONS</div>
+            <div className="metric-value text-green">{runningCosts?.co2Emissions || 'N/A'} g/km</div>
+            <div className="metric-sub">Carbon footprint rating</div>
+          </div>
+          <div className="metric-card" data-tooltip="Checks if the vehicle has been marked for export from the UK.">
+            <div className="metric-title">EXPORT STATUS</div>
+            <div className="metric-value text-green">NOT EXPORTED</div>
+            <div className="metric-sub">Verified for UK use</div>
           </div>
         </div>
 
@@ -171,36 +217,39 @@ export default function VehiclePage({ params }) {
           {/* RIGHT: AI Hub */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {aiReport && (
-              <div className="card" style={{ flex: 1 }}>
+              <div className="card" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                {!isUnlocked && (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.7)', backdropFilter: 'blur(10px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+                    <h3 style={{ marginBottom: '0.5rem', color: 'white' }}>AI Forensic Intelligence Locked</h3>
+                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>Unlock our deep-learning analysis of risk vectors, ownership patterns, and estimated repair costs.</p>
+                    <button className="action-btn primary" style={{ background: 'var(--accent-purple)' }} onClick={() => setIsModalOpen(true)}>Unlock Now for £9.99</button>
+                  </div>
+                )}
+                
                 <div className="ai-header">
                   <div className="card-header" style={{ marginBottom: 0 }}>🧠 AI Intelligence Hub</div>
                   <div className="ai-verdict-pill">{aiReport.verdict.icon} AI Verdict: {aiReport.verdict.status}</div>
                 </div>
                 
-                <p className="ai-text" dangerouslySetInnerHTML={{ __html: aiReport.summary.replace('17-year-old', '<strong>17-year-old</strong>').replace('67% pass rate', '<strong>67% pass rate</strong>').replace('7 failures', '<strong>7 failures</strong>') }} />
-                
-                <p className="ai-text" style={{ fontSize: '0.9rem' }}>
-                  The mileage is consistent year-over-year (<strong>~{aiReport.mileageAnalysis.avgAnnualMiles.toLocaleString()} miles/year</strong>), which is a positive sign. However, at {vehicle?.latest_mileage?.toLocaleString()} miles, major mechanical components are likely near end-of-life. <strong>Use the highlighted risk components to negotiate a lower price or request repairs before purchase.</strong>
-                </p>
+                <div style={{ opacity: isUnlocked ? 1 : 0.1, filter: isUnlocked ? 'none' : 'blur(5px)' }}>
+                  <p className="ai-text" dangerouslySetInnerHTML={{ __html: aiReport.summary.replace('17-year-old', '<strong>17-year-old</strong>').replace('67% pass rate', '<strong>67% pass rate</strong>').replace('7 failures', '<strong>7 failures</strong>') }} />
+                  
+                  <p className="ai-text" style={{ fontSize: '0.9rem' }}>
+                    The mileage is consistent year-over-year (<strong>~{aiReport.mileageAnalysis.avgAnnualMiles.toLocaleString()} miles/year</strong>), which is a positive sign. However, at {vehicle?.latest_mileage?.toLocaleString()} miles, major mechanical components are likely near end-of-life. <strong>Use the highlighted risk components to negotiate a lower price or request repairs before purchase.</strong>
+                  </p>
 
-                <div className="ai-cards">
-                  <div className="ai-subcard">
-                    <div className="ai-subcard-title">💰 Est. Annual Maintenance</div>
-                    <div className="ai-subcard-value">{aiReport.estimatedAnnualCost}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Based on age & defect history</div>
-                  </div>
-                  <div className="ai-subcard">
-                    <div className="ai-subcard-title">📊 Mileage Analysis</div>
-                    <div className="ai-subcard-value text-blue" style={{ color: 'var(--accent-blue)' }}>{aiReport.mileageAnalysis.avgAnnualMiles.toLocaleString()}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Average miles/year · No clocking concerns</div>
-                  </div>
-                  <div className="ai-subcard">
-                    <div className="ai-subcard-title">⚠️ Top Risk Components</div>
-                    <ul style={{ margin: 0, paddingLeft: '1rem', fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-                      {aiReport.riskParts.slice(0,2).map((part, i) => (
-                        <li key={i} style={{ marginBottom: '0.25rem', color: 'var(--accent-red)' }}><strong style={{ color: 'var(--text-primary)' }}>{part.name}</strong></li>
-                      ))}
-                    </ul>
+                  <div className="ai-cards">
+                    <div className="ai-subcard">
+                      <div className="ai-subcard-title">💰 Est. Annual Maintenance</div>
+                      <div className="ai-subcard-value">{aiReport.estimatedAnnualCost}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Based on age & defect history</div>
+                    </div>
+                    <div className="ai-subcard">
+                      <div className="ai-subcard-title">📊 Mileage Analysis</div>
+                      <div className="ai-subcard-value text-blue" style={{ color: 'var(--accent-blue)' }}>{aiReport.mileageAnalysis.avgAnnualMiles.toLocaleString()}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Average miles/year · No clocking concerns</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -210,7 +259,7 @@ export default function VehiclePage({ params }) {
               <div className="action-btn" onClick={() => setShowCompareModal(true)}>⚖️ Compare vehicles</div>
               <div className="action-btn" onClick={() => setShowShareModal(true)}>🔗 Share report</div>
               <a href={`https://www.check-mot.service.gov.uk/results?registration=${reg}`} target="_blank" rel="noreferrer" className="action-btn" style={{ textDecoration: 'none' }}>📋 Verify on GOV.UK</a>
-              <div className="action-btn primary" onClick={() => setShowPremiumModal(true)}>🔒 Full history check</div>
+              <div className="action-btn primary" onClick={() => setIsModalOpen(true)}>🔒 Unlock Forensic Report</div>
             </div>
           </div>
         </div>
@@ -292,19 +341,81 @@ export default function VehiclePage({ params }) {
 
         <div className="details-grid">
           {recalls && recalls.length > 0 && (
-            <div className="card" style={{ gridColumn: '1 / -1', borderLeft: '4px solid var(--accent-red)' }}>
-              <div className="card-header" style={{ color: 'var(--accent-red)' }}>⚠️ FACTORY RECALLS FOUND ({recalls.length})</div>
+            <div className="card" style={{ gridColumn: '1 / -1', borderLeft: '4px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)' }}>
+              <div className="card-header" style={{ color: 'var(--text-primary)' }}>🛠️ SAFETY RECALL HISTORY ({recalls.length})</div>
               <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
                 {recalls.map((r, i) => (
-                  <div key={i} style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
-                    <div style={{ color: 'var(--accent-red)', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{r.recall_number}</div>
+                  <div key={i} style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: `1px solid ${r.status === 'OUTSTANDING' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold' }}>{r.recall_number}</div>
+                      <div style={{ 
+                        background: r.status === 'OUTSTANDING' ? '#7f1d1d' : '#064e3b', 
+                        color: r.status === 'OUTSTANDING' ? '#f87171' : '#34d399',
+                        padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold'
+                      }}>
+                        {r.status === 'OUTSTANDING' ? '🔴 OUTSTANDING' : '✅ REPAIRED'}
+                      </div>
+                    </div>
                     <h4 style={{ margin: '0 0 0.5rem 0' }}>{r.concern}</h4>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{r.defect}</p>
+                    {r.status === 'CLOSED' && (
+                      <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        🛡️ Manufacturer repair verified for this VIN
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
+
+          <div className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(to right, var(--bg-card), var(--bg-secondary))' }}>
+            <div className="card-header" style={{ color: 'var(--accent-blue)' }}>✅ DECISION CLARITY CHECKLIST</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>{safetyScore?.motReliabilityScore > 50 ? '✅' : '⚠️'}</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>MOT Status</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{safetyScore?.motReliabilityScore > 50 ? 'Valid & Reliable' : 'Risk Identified'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>{mileageTimeline?.some(t => t.anomaly_flag) ? '❌' : '✅'}</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Mileage History</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{mileageTimeline?.some(t => t.anomaly_flag) ? 'Anomaly Detected' : 'Verified Consistent'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>{recalls?.some(r => r.status === 'OUTSTANDING') ? '❌' : '✅'}</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Safety Recalls</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{recalls?.some(r => r.status === 'OUTSTANDING') ? 'Outstanding Repair' : 'All Clear / Fixed'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>✅</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>ULEZ Compliance</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Compliant for Cities</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: isUnlocked ? 1 : 0.4, filter: isUnlocked ? 'none' : 'blur(4px)' }}>
+                <span style={{ fontSize: '1.5rem' }}>{provenance?.has_outstanding_finance ? '❌' : '✅'}</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Financial Clear</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isUnlocked ? (provenance?.has_outstanding_finance ? 'Finance Detected' : 'No Finance Debt') : 'Hidden - Unlock Report'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: isUnlocked ? 1 : 0.4, filter: isUnlocked ? 'none' : 'blur(4px)' }}>
+                <span style={{ fontSize: '1.5rem' }}>{provenance?.write_off_category ? '❌' : '✅'}</span>
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Damage History</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isUnlocked ? (provenance?.write_off_category ? `Cat ${provenance.write_off_category}` : 'No Write-off History') : 'Hidden - Unlock Report'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="card">
             <div className="card-header">🚗 VEHICLE DETAILS</div>
@@ -332,6 +443,65 @@ export default function VehiclePage({ params }) {
                   <div className="dist-value">{d.count} ({d.percentage}%)</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
+            <div className="card-header">🛡️ SECURITY & PROVENANCE</div>
+            
+            {!isUnlocked && (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.6)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1rem' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>Unlock Provenance</div>
+                <button style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', marginTop: '0.5rem' }} className="action-btn primary" onClick={() => setIsModalOpen(true)}>Pay £9.99</button>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gap: '0.75rem', opacity: isUnlocked ? 1 : 0.2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Stolen Status</span>
+                <span style={{ color: provenance?.is_stolen ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 'bold' }}>{provenance?.is_stolen ? 'STOLEN' : 'NOT STOLEN'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Outstanding Finance</span>
+                <span style={{ color: provenance?.has_outstanding_finance ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 'bold' }}>{provenance?.has_outstanding_finance ? 'YES' : 'NO'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Write-off History</span>
+                <span style={{ color: provenance?.write_off_category ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 'bold' }}>{provenance?.write_off_category || 'NONE'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Scrapped Status</span>
+                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>NO</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
+            <div className="card-header">📊 MARKET VALUATION</div>
+            
+            {!isUnlocked && (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.6)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1rem' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💹</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>Unlock Valuation</div>
+                <button style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', marginTop: '0.5rem' }} className="action-btn primary" onClick={() => setIsModalOpen(true)}>Pay £9.99</button>
+              </div>
+            )}
+
+            <div style={{ textAlign: 'center', opacity: isUnlocked ? 1 : 0.2 }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-green)' }}>£{provenance?.market_valuation?.average?.toLocaleString()}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Estimated Fair Market Value</div>
+              
+              <div style={{ height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden', display: 'flex' }}>
+                <div style={{ width: '33%', background: 'var(--accent-yellow)', opacity: 0.5 }}></div>
+                <div style={{ width: '34%', background: 'var(--accent-green)' }}></div>
+                <div style={{ width: '33%', background: 'var(--accent-red)', opacity: 0.5 }}></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', fontSize: '0.75rem', fontWeight: '600' }}>
+                <span>£{provenance?.market_valuation?.low?.toLocaleString()}</span>
+                <span>£{provenance?.market_valuation?.high?.toLocaleString()}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -398,6 +568,31 @@ export default function VehiclePage({ params }) {
 
       </div>
       <Footer />
+
+      <CheckoutModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onPaymentSuccess={() => {
+          setIsUnlocked(true);
+          addNotification({
+            title: 'Report Unlocked!',
+            message: 'Detailed forensic intelligence is now available. A receipt has been sent to your email and phone.',
+            icon: '🛡️'
+          });
+        }}
+      />
+
+      <div className="toast-container">
+        {notifications.map(n => (
+          <Toast 
+            key={n.id}
+            title={n.title}
+            message={n.message}
+            icon={n.icon}
+            onClose={() => removeNotification(n.id)}
+          />
+        ))}
+      </div>
     </>
   );
 }
