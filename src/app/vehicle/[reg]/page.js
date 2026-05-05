@@ -256,10 +256,10 @@ export default function VehiclePage({ params }) {
             )}
 
             <div className="action-buttons">
-              <div className="action-btn" onClick={() => setShowCompareModal(true)}>⚖️ Compare vehicles</div>
-              <div className="action-btn" onClick={() => setShowShareModal(true)}>🔗 Share report</div>
+              <button className="action-btn" onClick={() => setShowCompareModal(true)}>⚖️ Compare vehicles</button>
+              <button className="action-btn" onClick={() => setShowShareModal(true)}>🔗 Share report</button>
               <a href={`https://www.check-mot.service.gov.uk/results?registration=${reg}`} target="_blank" rel="noreferrer" className="action-btn" style={{ textDecoration: 'none' }}>📋 Verify on GOV.UK</a>
-              <div className="action-btn primary" onClick={() => setIsModalOpen(true)}>🔒 Unlock Forensic Report</div>
+              <button className="action-btn primary" onClick={() => setIsModalOpen(true)}>🔒 Unlock Forensic Report</button>
             </div>
           </div>
         </div>

@@ -530,13 +530,143 @@ a { color: inherit; text-decoration: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-  .nav { display: none; }
-  .hero h1 { font-size: 2rem; }
-  .pipeline-grid { grid-template-columns: 1fr; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .vehicle-grid { grid-template-columns: 1fr; }
-  .features-grid { grid-template-columns: 1fr; }
-  .info-grid { grid-template-columns: 1fr; }
+/* ===== RESPONSIVE DESIGN & ACCESSIBILITY ===== */
+
+/* High-resolution focus indicators */
+:focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: 3px;
 }
+
+/* Base Responsive Container */
+.layout-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .layout-container {
+    padding: 2rem;
+    gap: 2rem;
+  }
+}
+
+/* Header Adjustments */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 1rem;
+    height: 64px;
+  }
+  .nav {
+    display: none;
+  }
+  .hero {
+    padding: 4rem 1rem 2rem;
+  }
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+  .pipeline-grid {
+    grid-template-columns: 1fr;
+  }
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Vehicle Header Stack */
+@media (max-width: 900px) {
+  .top-header {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .vehicle-title {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Main Dashboard Grid */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .main-grid {
+    grid-template-columns: 350px 1fr;
+    gap: 2rem;
+  }
+}
+
+/* AI Hub Cards */
+.ai-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 640px) {
+  .ai-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .ai-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Action Buttons Grid */
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .action-buttons {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Details Grid */
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Modal Responsiveness */
+.modal-content {
+  width: 95%;
+  max-width: 500px;
+  padding: 1.5rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Improved Touch Targets */
+.action-btn, .search-btn, .method-btn, .pay-btn {
+  min-height: 48px;
+}
+
+/* Ensure images don't overflow */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
