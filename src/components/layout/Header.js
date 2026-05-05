@@ -35,7 +35,7 @@ export default function Header() {
         <a href="/" className="logo">
           <span className="logo-flag">🇬🇧</span> CarRecalls UK
         </a>
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+        <nav className="header-nav">
           <ul className="nav">
             <li><a href="/">Home</a></li>
             <li><a href="/recalls">Recalls Database</a></li>
@@ -44,7 +44,7 @@ export default function Header() {
             <li><a href="/" className="nav-cta">Check Vehicle</a></li>
           </ul>
           
-          <div style={{ display: 'flex', gap: '0.5rem', borderLeft: '1px solid var(--border-glass)', paddingLeft: '1.5rem' }}>
+          <div className="header-controls">
             <button 
               onClick={toggleTheme} 
               title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}

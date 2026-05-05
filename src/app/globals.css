@@ -133,6 +133,33 @@ a { color: inherit; text-decoration: none; }
 .nav { display: flex; gap: 2rem; list-style: none; }
 .nav a { color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; }
 .nav a:hover { color: var(--text-primary); }
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+.header-controls {
+  display: flex;
+  gap: 0.5rem;
+  border-left: 1px solid var(--border-glass);
+  padding-left: 1.5rem;
+}
+@media (max-width: 768px) {
+  .header-nav {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .header-controls {
+    border-left: none;
+    padding-left: 0;
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-glass);
+  }
+}
 .nav-cta {
   background: var(--gradient-accent); color: white !important;
   padding: 0.5rem 1.2rem; border-radius: var(--radius-sm); font-weight: 600;
@@ -559,23 +586,27 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 768px) {
   .header {
     padding: 0 1rem;
-    height: 64px;
+    height: auto; /* Allow growth for stacked mobile nav */
+    padding-bottom: 0.5rem;
+  }
+  .header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
   }
   .nav {
-    display: none;
+    display: flex !important; /* Force visible */
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 0.5rem;
+    gap: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Hide scrollbar for clean look */
   }
-  .hero {
-    padding: 4rem 1rem 2rem;
-  }
-  .hero h1 {
-    font-size: 2.2rem;
-  }
-  .pipeline-grid {
-    grid-template-columns: 1fr;
-  }
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav li { flex-shrink: 0; }
+  .nav a { font-size: 0.85rem; white-space: nowrap; }
 }
 
 /* Vehicle Header Stack */
@@ -657,6 +688,16 @@ a { color: inherit; text-decoration: none; }
   padding: 1.5rem;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+/* Fix for narrow mobile viewports (iPhone SE/12 mini) */
+@media (max-width: 360px) {
+  .metrics-row {
+    grid-template-columns: 1fr; /* Stack everything on very small screens */
+  }
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Improved Touch Targets */
