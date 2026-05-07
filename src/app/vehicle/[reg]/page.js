@@ -11,7 +11,7 @@ export default function VehiclePage({ params }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Modal States
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
@@ -85,7 +85,7 @@ export default function VehiclePage({ params }) {
       <Header />
       <div className="layout-container" style={{ marginTop: '4rem' }}>
         <a href="/" className="back-link">← Back to search</a>
-        
+
         {isMotExpired && (
           <div style={{ background: 'var(--accent-red)', color: 'white', padding: '1.5rem', borderRadius: 'var(--radius-md)', display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '2rem', boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)' }}>
             <div style={{ fontSize: '3rem' }}>🚨</div>
@@ -103,7 +103,7 @@ export default function VehiclePage({ params }) {
             <h1 className="vehicle-title">{vehicle?.make} {vehicle?.model}</h1>
             <div className="vehicle-tags">
               <span className="tag">{new Date(vehicle?.first_used_date).getFullYear() || 'N/A'}</span>
-              <span className="tag">{vehicle?.fuel_type} · {(vehicle?.engine_size_cc/1000).toFixed(1)}L</span>
+              <span className="tag">{vehicle?.fuel_type} · {(vehicle?.engine_size_cc / 1000).toFixed(1)}L</span>
               <span className="tag">{vehicle?.primary_colour}</span>
               <span className="tag">5-door MPV</span>
             </div>
@@ -161,7 +161,7 @@ export default function VehiclePage({ params }) {
           </div>
           <div className="metric-card" data-tooltip="The total time elapsed since the vehicle's first registration.">
             <div className="metric-title">VEHICLE AGE</div>
-            <div className="metric-value text-purple">{( (new Date() - new Date(vehicle.first_used_date)) / (1000 * 60 * 60 * 24 * 365.25) ).toFixed(1)} Yrs</div>
+            <div className="metric-value text-purple">{((new Date() - new Date(vehicle.first_used_date)) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1)} Yrs</div>
             <div className="metric-sub">Since first registration</div>
           </div>
           <div className="metric-card" data-tooltip="Grams of CO2 emitted per kilometer. Important for tax and environment.">
@@ -193,7 +193,7 @@ export default function VehiclePage({ params }) {
               </div>
               <div className="score-pill">{safetyScore?.riskLevel} RISK</div>
             </div>
-            
+
             <div className="progress-list">
               <div className="progress-item">
                 <div className="progress-labels"><span>MOT pass history</span><span className="text-yellow">67%</span></div>
@@ -226,15 +226,15 @@ export default function VehiclePage({ params }) {
                     <button className="action-btn primary" style={{ background: 'var(--accent-purple)' }} onClick={() => setIsModalOpen(true)}>Unlock Now for £9.99</button>
                   </div>
                 )}
-                
+
                 <div className="ai-header">
                   <div className="card-header" style={{ marginBottom: 0 }}>🧠 AI Intelligence Hub</div>
                   <div className="ai-verdict-pill">{aiReport.verdict.icon} AI Verdict: {aiReport.verdict.status}</div>
                 </div>
-                
+
                 <div style={{ opacity: isUnlocked ? 1 : 0.1, filter: isUnlocked ? 'none' : 'blur(5px)' }}>
                   <p className="ai-text" dangerouslySetInnerHTML={{ __html: aiReport.summary.replace('17-year-old', '<strong>17-year-old</strong>').replace('67% pass rate', '<strong>67% pass rate</strong>').replace('7 failures', '<strong>7 failures</strong>') }} />
-                  
+
                   <p className="ai-text" style={{ fontSize: '0.9rem' }}>
                     The mileage is consistent year-over-year (<strong>~{aiReport.mileageAnalysis.avgAnnualMiles.toLocaleString()} miles/year</strong>), which is a positive sign. However, at {vehicle?.latest_mileage?.toLocaleString()} miles, major mechanical components are likely near end-of-life. <strong>Use the highlighted risk components to negotiate a lower price or request repairs before purchase.</strong>
                   </p>
@@ -265,7 +265,7 @@ export default function VehiclePage({ params }) {
         </div>
 
         {/* --- MODALS --- */}
-        
+
         {/* Share: AI Dealer Dossier */}
         {showShareModal && (
           <div className="modal-backdrop" onClick={() => setShowShareModal(false)}>
@@ -301,7 +301,7 @@ export default function VehiclePage({ params }) {
                 <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '4px' }}>
                   <div style={{ width: `${vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%`, height: '100%', background: 'var(--accent-red)', borderRadius: '4px' }}></div>
                 </div>
-                
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                   <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>UK Average for {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make}s</span>
                   <strong style={{ color: 'var(--accent-green)' }}>78%</strong>
@@ -348,8 +348,8 @@ export default function VehiclePage({ params }) {
                   <div key={i} style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: `1px solid ${r.status === 'OUTSTANDING' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                       <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold' }}>{r.recall_number}</div>
-                      <div style={{ 
-                        background: r.status === 'OUTSTANDING' ? '#7f1d1d' : '#064e3b', 
+                      <div style={{
+                        background: r.status === 'OUTSTANDING' ? '#7f1d1d' : '#064e3b',
                         color: r.status === 'OUTSTANDING' ? '#f87171' : '#34d399',
                         padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold'
                       }}>
@@ -449,7 +449,7 @@ export default function VehiclePage({ params }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
           <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
             <div className="card-header">🛡️ SECURITY & PROVENANCE</div>
-            
+
             {!isUnlocked && (
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.6)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1rem' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
@@ -480,7 +480,7 @@ export default function VehiclePage({ params }) {
 
           <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
             <div className="card-header">📊 MARKET VALUATION</div>
-            
+
             {!isUnlocked && (
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.6)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1rem' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💹</div>
@@ -492,7 +492,7 @@ export default function VehiclePage({ params }) {
             <div style={{ textAlign: 'center', opacity: isUnlocked ? 1 : 0.2 }}>
               <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-green)' }}>£{provenance?.market_valuation?.average?.toLocaleString()}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Estimated Fair Market Value</div>
-              
+
               <div style={{ height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden', display: 'flex' }}>
                 <div style={{ width: '33%', background: 'var(--accent-yellow)', opacity: 0.5 }}></div>
                 <div style={{ width: '34%', background: 'var(--accent-green)' }}></div>
@@ -517,7 +517,7 @@ export default function VehiclePage({ params }) {
                 <div key={i} className="timeline-event">
                   {!isLastVisible && <div className="timeline-line"></div>}
                   <div className="timeline-dot-hollow" style={{ borderColor: isPass ? 'var(--accent-green)' : 'var(--accent-red)' }}></div>
-                  
+
                   <div className="timeline-event-header">
                     <div>
                       <div className="timeline-date-title">{new Date(test.test_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
@@ -540,7 +540,7 @@ export default function VehiclePage({ params }) {
                         if (d.defect_type === 'DANGEROUS') pillClass = 'pill-solid-red';
                         else if (d.defect_type === 'MAJOR') pillClass = 'pill-outline-red';
                         else if (d.defect_type === 'MINOR') pillClass = 'pill-outline-yellow';
-                        
+
                         return (
                           <div key={idx} className="defect-row">
                             <div className={pillClass} style={{ textTransform: 'capitalize' }}>{d.defect_type.toLowerCase()}</div>
@@ -554,9 +554,9 @@ export default function VehiclePage({ params }) {
                 </div>
               )
             })}
-            
+
             {motHistory?.length > 5 && (
-              <div 
+              <div
                 style={{ color: 'var(--accent-blue)', fontSize: '0.9rem', cursor: 'pointer', marginTop: '1rem', fontWeight: 'bold' }}
                 onClick={() => setShowAllTests(!showAllTests)}
               >
@@ -569,9 +569,9 @@ export default function VehiclePage({ params }) {
       </div>
       <Footer />
 
-      <CheckoutModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <CheckoutModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         onPaymentSuccess={() => {
           setIsUnlocked(true);
           addNotification({
@@ -584,7 +584,7 @@ export default function VehiclePage({ params }) {
 
       <div className="toast-container">
         {notifications.map(n => (
-          <Toast 
+          <Toast
             key={n.id}
             title={n.title}
             message={n.message}
