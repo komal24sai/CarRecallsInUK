@@ -24,7 +24,7 @@ export async function GET(request) {
     }
 
     // 2. Fetch specific model data
-    const result = await checkRecallsByMakeModel(makeUpper, modelUpper);
+    const result = await checkRecallsByMakeModel(makeUpper, modelUpper, year);
 
     if (result && result.error === 'MODEL_MISMATCH') {
       return Response.json({
