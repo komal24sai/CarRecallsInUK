@@ -91,7 +91,7 @@ export default function RecallsSearchPage() {
                 placeholder="YYYY"
               />
             </div>
-            <button type="submit" className="action-btn primary" disabled={loading} style={{ height: '48px', padding: '0 2rem' }}>
+            <button type="submit" className="action-btn primary" disabled={loading} style={{ padding: '0 2rem', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'row' }}>
               {loading ? 'Searching...' : 'Search Recalls'}
             </button>
           </form>
