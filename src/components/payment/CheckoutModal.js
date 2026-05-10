@@ -1,78 +1,165 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { DodoPayments } from 'dodopayments-checkout';
 import './CheckoutModal.css';
 
-export default function CheckoutModal({ isOpen, onClose, onPaymentSuccess, amount = '9.99' }) {
-  const [formData, setFormData] = useState({
-    cardName: '',
-    cardNumber: '',
-    expiry: '',
-    cvv: '',
-    email: '',
-    phone: ''
+// Initialise the Dodo Payments SDK once when the module loads.
+// Mode is 'live' because your product is deployed on isthiscarsafe.co.uk.
+// Change to 'test' only while developing locally against test credentials.
+let sdkInitialised = false;
+
+function initSDK(onEvent) {
+  if (sdkInitialised) return;
+  DodoPayments.Initialize({
+    mode: 'live',
+    displayType: 'overlay',
+    onEvent,
   });
-  
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [status, setStatus] = useState(null); // 'success' | 'error' | null
+  sdkInitialised = true;
+}
+
+export default function CheckoutModal({ isOpen, onClose, onPaymentSuccess, amount = '9.99', registration }) {
+  const [formData, setFormData] = useState({ email: '', name: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Wire up SDK events
+  useEffect(() => {
+    initSDK((event) => {
+      switch (event.event_type) {
+        case 'checkout.opened':
+          setIsLoading(false);
+          break;
+        case 'checkout.redirect':
+          // Payment is processing / succeeded — close our modal wrapper
+          onPaymentSuccess?.();
+          onClose?.();
+          break;
+        case 'checkout.closed':
+          setIsLoading(false);
+          onClose?.();
+          break;
+        case 'checkout.error':
+          console.error('[Checkout] Error:', event.data?.message);
+          setError('Checkout encountered an error. Please try again.');
+          setIsLoading(false);
+          break;
+        case 'checkout.link_expired':
+          setError('Your checkout session expired. Please try again.');
+          setIsLoading(false);
+          break;
+        default:
+          break;
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const validateForm = () => {
-    return Object.values(formData).every(val => val.trim() !== '');
-  };
-
-  const handlePayment = async (e) => {
+  const handleCheckout = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      setStatus('error');
+    setError(null);
+
+    if (!formData.email.trim()) {
+      setError('Please enter your email address.');
       return;
     }
 
-    setIsProcessing(true);
-    setStatus(null);
+    setIsLoading(true);
 
-    // Simulate Payment API Call
-    setTimeout(() => {
-      // Simulate 90% success rate for the demo
-      const isSuccessful = Math.random() > 0.1;
+    try {
+      // 1. Create a checkout session on our server
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          name: formData.name.trim() || 'Customer',
+          registration: registration || '',
+        }),
+      });
 
-      if (isSuccessful) {
-        setStatus('success');
-        // Simulate sending notifications
-        console.log(`[Notification] Receipt sent to ${formData.email} and SMS to ${formData.phone}`);
-        
-        setTimeout(() => {
-          onPaymentSuccess();
-          onClose();
-        }, 2000);
-      } else {
-        setStatus('error');
-        setIsProcessing(false);
+      const data = await res.json();
+
+      if (!res.ok || !data.checkoutUrl) {
+        throw new Error(data.error || 'Failed to create checkout session');
       }
-    }, 2000);
+
+      // 2. Open the Dodo overlay with the session URL
+      await DodoPayments.Checkout.open({
+        checkoutUrl: data.checkoutUrl,
+        options: {
+          showTimer: true,
+          showSecurityBadge: true,
+          themeConfig: {
+            dark: {
+              bgPrimary: '#0d0d1a',
+              bgSecondary: '#1a1a2e',
+              borderPrimary: '#2d2d5e',
+              textPrimary: '#ffffff',
+              textSecondary: '#a0a0c0',
+              buttonPrimary: '#7c3aed',
+              buttonPrimaryHover: '#6d28d9',
+              buttonTextPrimary: '#ffffff',
+            },
+            radius: '12px',
+          },
+        },
+      });
+    } catch (err) {
+      console.error('[Checkout]', err);
+      setError(err.message || 'Something went wrong. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="checkout-card" onClick={e => e.stopPropagation()}>
+      <div className="checkout-card" onClick={(e) => e.stopPropagation()}>
         <div className="checkout-header">
           <h3 style={{ margin: 0 }}>Unlock Forensic Report</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}>&times;</button>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}
+            aria-label="Close checkout"
+          >
+            &times;
+          </button>
         </div>
-        
+
         <div className="checkout-body">
-          <div style={{ background: 'rgba(var(--accent-purple-rgb), 0.05)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginBottom: '1.5rem', border: '1px solid rgba(var(--accent-purple-rgb), 0.1)' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>🔓 WHAT'S INCLUDED:</div>
-            <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem' }}>
+          {/* What's included */}
+          <div
+            style={{
+              background: 'rgba(124,58,237,0.08)',
+              padding: '1rem',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: '1.5rem',
+              border: '1px solid rgba(124,58,237,0.2)',
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem', color: '#a78bfa' }}>
+              🔓 WHAT'S INCLUDED:
+            </div>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: '1.25rem',
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.4rem',
+              }}
+            >
               <li>🧠 AI Forensic Verdict</li>
-              <li>🛡️ Finance & Stolen Check</li>
+              <li>🛡️ Finance &amp; Stolen Check</li>
               <li>📊 Market Valuation</li>
               <li>💰 Maintenance Forecast</li>
               <li>📉 Mileage Auditing</li>
@@ -80,85 +167,61 @@ export default function CheckoutModal({ isOpen, onClose, onPaymentSuccess, amoun
             </ul>
           </div>
 
+          {/* Price */}
           <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Total Amount</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>One-time payment</div>
             <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)' }}>£{amount}</div>
           </div>
 
-          <div className="payment-methods">
-            <div className="method-btn active">💳 Card</div>
-            <div className="method-btn"> Pay</div>
-          </div>
-
-          <form onSubmit={handlePayment}>
+          {/* Form */}
+          <form onSubmit={handleCheckout}>
             <div className="form-group">
-              <label className="form-label">Full Name</label>
-              <input 
-                type="text" name="cardName" className="form-input" placeholder="John Doe"
-                value={formData.cardName} onChange={handleInputChange} required
+              <label className="form-label" htmlFor="checkout-name">Full Name (optional)</label>
+              <input
+                id="checkout-name"
+                type="text"
+                name="name"
+                className="form-input"
+                placeholder="John Smith"
+                value={formData.name}
+                onChange={handleInputChange}
+                autoComplete="name"
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">Card Number</label>
-              <input 
-                type="text" name="cardNumber" className="form-input" placeholder="xxxx xxxx xxxx xxxx"
-                value={formData.cardNumber} onChange={handleInputChange} required
+              <label className="form-label" htmlFor="checkout-email">Email for Receipt *</label>
+              <input
+                id="checkout-email"
+                type="email"
+                name="email"
+                className="form-input"
+                placeholder="your@email.com"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                autoComplete="email"
               />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Expiry Date</label>
-                <input 
-                  type="text" name="expiry" className="form-input" placeholder="MM/YY"
-                  value={formData.expiry} onChange={handleInputChange} required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">CVV</label>
-                <input 
-                  type="password" name="cvv" className="form-input" placeholder="***"
-                  value={formData.cvv} onChange={handleInputChange} required
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Email for Receipt</label>
-              <input 
-                type="email" name="email" className="form-input" placeholder="your@email.com"
-                value={formData.email} onChange={handleInputChange} required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Phone for SMS Notification</label>
-              <input 
-                type="tel" name="phone" className="form-input" placeholder="+44 7..."
-                value={formData.phone} onChange={handleInputChange} required
-              />
-            </div>
-
-            {status === 'success' && (
-              <div className="status-message status-success">
-                ✅ Payment Successful! Authenticating...
-              </div>
-            )}
-
-            {status === 'error' && (
+            {error && (
               <div className="status-message status-error">
-                ❌ {validateForm() ? 'Payment Failed. Please check your card details.' : 'All fields are required.'}
+                ❌ {error}
               </div>
             )}
 
-            <button type="submit" className="pay-btn" disabled={isProcessing || status === 'success'}>
-              {isProcessing ? 'Processing Securely...' : `Pay £${amount} Securely`}
+            <button
+              type="submit"
+              className="pay-btn"
+              disabled={isLoading}
+              id="dodo-checkout-submit"
+            >
+              {isLoading ? 'Opening Secure Checkout…' : `Pay £${amount} Securely`}
             </button>
           </form>
-          
+
           <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            🔒 Secured by Stripe & 256-bit Encryption
+            🔒 Secured by Dodo Payments · 256-bit Encryption · PCI-DSS Compliant
           </div>
         </div>
       </div>

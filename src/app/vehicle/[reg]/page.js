@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useSearchParams } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CheckoutModal from '@/components/payment/CheckoutModal';
@@ -20,6 +20,7 @@ export default function VehiclePage({ params }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const searchParams = useSearchParams();
 
   const addNotification = (notif) => {
     const id = Date.now();
@@ -33,6 +34,20 @@ export default function VehiclePage({ params }) {
   useEffect(() => {
     fetchVehicle();
   }, [reg]);
+
+  // Auto-unlock when Dodo redirects back with ?payment=success
+  useEffect(() => {
+    if (searchParams.get('payment') === 'success' && !isUnlocked) {
+      setIsUnlocked(true);
+      addNotification({
+        title: '🎉 Report Unlocked!',
+        message: 'Payment confirmed. Your full forensic report is now available. A receipt has been sent to your email.',
+        icon: '🛡️',
+      });
+      // Clean the URL so it doesn't re-trigger on refresh
+      window.history.replaceState({}, '', `/vehicle/${reg}`);
+    }
+  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchVehicle() {
     setLoading(true);
@@ -572,12 +587,15 @@ export default function VehiclePage({ params }) {
       <CheckoutModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        registration={reg}
+        amount="9.99"
         onPaymentSuccess={() => {
           setIsUnlocked(true);
+          setIsModalOpen(false);
           addNotification({
-            title: 'Report Unlocked!',
-            message: 'Detailed forensic intelligence is now available. A receipt has been sent to your email and phone.',
-            icon: '🛡️'
+            title: '🎉 Report Unlocked!',
+            message: 'Payment confirmed by Dodo Payments. Your full forensic report is now available.',
+            icon: '🛡️',
           });
         }}
       />
