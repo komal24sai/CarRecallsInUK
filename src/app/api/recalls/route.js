@@ -11,29 +11,51 @@ export async function GET(request) {
   }
 
   try {
-    // 1. Try to ingest fresh data from DVSA (updates DB)
-    await ingestRecallData(make.toUpperCase(), model.toUpperCase());
+    const makeUpper = make.toUpperCase();
+    const modelUpper = model.toUpperCase();
+
+    // 1. Validate Make first (Get all recalls for this make)
+    const makeData = await getRecallsByMake(makeUpper);
     
-    // 2. Fetch from DB
-    const allRecalls = getBronzeRecallData(make.toUpperCase(), model.toUpperCase());
+    if (!makeData || (Array.isArray(makeData) && makeData.length === 0)) {
+      return Response.json({ 
+        error: 'Invalid Make', 
+        message: `The vehicle manufacturer "${makeUpper}" was not found in the DVSA recall database. Please check the spelling and try again.` 
+      }, { status: 404 });
+    }
+
+    // 2. Validate Model within that Make
+    const allMakeRecalls = Array.isArray(makeData) ? makeData : (makeData.recalls || []);
+    const availableModels = [...new Set(allMakeRecalls.map(r => r.model?.toUpperCase()))];
+    const modelExists = availableModels.some(m => m === modelUpper || m?.includes(modelUpper) || modelUpper.includes(m));
+
+    if (!modelExists) {
+      return Response.json({
+        error: 'Model Mismatch',
+        message: `We found records for "${makeUpper}", but the model "${modelUpper}" does not appear to match their database. Please re-enter the correct model name.`,
+        availableModels: availableModels.slice(0, 10) // Optional: give hints
+      }, { status: 404 });
+    }
+
+    // 3. Try to ingest fresh data from DVSA for this specific model (updates DB)
+    await ingestRecallData(makeUpper, modelUpper);
+    
+    // 4. Fetch from DB
+    const allRecalls = getBronzeRecallData(makeUpper, modelUpper);
     let filteredRecalls = [...allRecalls];
 
-    // 3. Filter by year if provided
+    // 5. Filter by year if provided
     if (year && allRecalls.length > 0) {
       const targetYear = parseInt(year, 10);
       filteredRecalls = allRecalls.filter(recall => {
         if (!recall.build_start && !recall.build_end) return true;
-        
-        let inRange = false;
         const startYear = recall.build_start ? new Date(recall.build_start).getFullYear() : 1900;
         const endYear = recall.build_end ? new Date(recall.build_end).getFullYear() : new Date().getFullYear() + 1;
-        
-        if (targetYear >= startYear && targetYear <= endYear) inRange = true;
-        return inRange;
+        return (targetYear >= startYear && targetYear <= endYear);
       });
     }
 
-    // 4. Partition by year if NO year is provided
+    // 6. Partition by year if NO year is provided
     let partitioned = null;
     if (!year && allRecalls.length > 0) {
       partitioned = {};
@@ -60,12 +82,12 @@ export async function GET(request) {
     }
 
     return Response.json({
-      make: make.toUpperCase(),
-      model: model.toUpperCase(),
+      make: makeUpper,
+      model: modelUpper,
       year: year || 'All',
       totalRecalls: filteredRecalls.length,
       recalls: filteredRecalls,
-      partitioned: partitioned // Will be null if year was provided
+      partitioned: partitioned
     });
   } catch (error) {
     console.error('Recalls API Error:', error);

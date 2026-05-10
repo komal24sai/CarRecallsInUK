@@ -31,7 +31,8 @@ export default function RecallsSearchPage() {
 
       const res = await fetch(`/api/recalls?${query.toString()}`);
       if (!res.ok) {
-        throw new Error('Failed to fetch recalls. Please ensure the make and model are correct.');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to fetch recalls. Please ensure the make and model are correct.');
       }
       const data = await res.json();
       setResults(data);
@@ -98,8 +99,13 @@ export default function RecallsSearchPage() {
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', padding: '1rem', borderRadius: '8px', textAlign: 'center', marginBottom: '2rem' }}>
-            {error}
+          <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid var(--accent-red)', color: 'var(--text-primary)', padding: '2rem', borderRadius: '12px', textAlign: 'center', marginBottom: '3rem', maxWidth: '800px', margin: '0 auto 3rem auto' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⚠️</div>
+            <h3 style={{ color: 'var(--accent-red)', marginBottom: '0.5rem' }}>Search Issue Detected</h3>
+            <p style={{ fontSize: '1.05rem', lineHeight: '1.6' }}>{error}</p>
+            <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              Double-check the manufacturer name (e.g., "Volkswagen" not "Tpypta") and ensure the model matches.
+            </p>
           </div>
         )}
 
