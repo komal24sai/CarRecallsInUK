@@ -1,4 +1,4 @@
-import { ingestRecallData, getBronzeRecallData } from '@/lib/data/bronze';
+import { checkRecallsByMakeModel, getRecallsByMake } from '@/lib/dvsa/recalls-client';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -14,37 +14,30 @@ export async function GET(request) {
     const makeUpper = make.toUpperCase();
     const modelUpper = model.toUpperCase();
 
-    // 1. Validate Make first (Get all recalls for this make)
+    // 1. Validate Make first
     const makeData = await getRecallsByMake(makeUpper);
-    
-    if (!makeData || (Array.isArray(makeData) && makeData.length === 0)) {
+    if (!makeData) {
       return Response.json({ 
         error: 'Invalid Make', 
         message: `The vehicle manufacturer "${makeUpper}" was not found in the DVSA recall database. Please check the spelling and try again.` 
       }, { status: 404 });
     }
 
-    // 2. Validate Model within that Make
-    const allMakeRecalls = Array.isArray(makeData) ? makeData : (makeData.recalls || []);
-    const availableModels = [...new Set(allMakeRecalls.map(r => r.model?.toUpperCase()))];
-    const modelExists = availableModels.some(m => m === modelUpper || m?.includes(modelUpper) || modelUpper.includes(m));
+    // 2. Fetch specific model data
+    const result = await checkRecallsByMakeModel(makeUpper, modelUpper);
 
-    if (!modelExists) {
+    if (result && result.error === 'MODEL_MISMATCH') {
       return Response.json({
         error: 'Model Mismatch',
         message: `We found records for "${makeUpper}", but the model "${modelUpper}" does not appear to match their database. Please re-enter the correct model name.`,
-        availableModels: availableModels.slice(0, 10) // Optional: give hints
+        availableModels: result.availableModels.slice(0, 10)
       }, { status: 404 });
     }
 
-    // 3. Try to ingest fresh data from DVSA for this specific model (updates DB)
-    await ingestRecallData(makeUpper, modelUpper);
-    
-    // 4. Fetch from DB
-    const allRecalls = getBronzeRecallData(makeUpper, modelUpper);
+    const allRecalls = result ? result.recalls : [];
     let filteredRecalls = [...allRecalls];
 
-    // 5. Filter by year if provided
+    // 3. Filter by year if provided
     if (year && allRecalls.length > 0) {
       const targetYear = parseInt(year, 10);
       filteredRecalls = allRecalls.filter(recall => {
@@ -55,7 +48,7 @@ export async function GET(request) {
       });
     }
 
-    // 6. Partition by year if NO year is provided
+    // 4. Partition by year if NO year is provided
     let partitioned = null;
     if (!year && allRecalls.length > 0) {
       partitioned = {};
@@ -83,7 +76,7 @@ export async function GET(request) {
 
     return Response.json({
       make: makeUpper,
-      model: modelUpper,
+      model: result ? result.model : modelUpper,
       year: year || 'All',
       totalRecalls: filteredRecalls.length,
       recalls: filteredRecalls,
