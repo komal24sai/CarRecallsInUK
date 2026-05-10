@@ -40,19 +40,19 @@ export async function GET(request, { params }) {
           transformVehicle(registration);
           vehicle = getSilverVehicle(registration);
         } else {
-          // FALLBACK: If DVSA returns no data, try to find a mock record for demo purposes
-          vehicle = getSilverVehicle(registration); // Check if we have a local mock
-          if (!vehicle) throw new Error('Vehicle not found');
-        }
-      } catch (err) {
-        console.warn(`[API] DVSA Live Ingestion failed for ${registration}, falling back to mock:`, err.message);
-        vehicle = getSilverVehicle(registration);
-        if (!vehicle) {
+          // If registration is not found in DVSA
           return NextResponse.json({
             error: 'Vehicle not found',
-            message: `No records found for registration ${registration}.`,
+            message: `The registration number ${registration} does not exist in the official MOT database. Please check and try again.`,
+            status: 'NOT_FOUND'
           }, { status: 404 });
         }
+      } catch (err) {
+        console.error(`[API] DVSA Live Ingestion failed for ${registration}:`, err.message);
+        return NextResponse.json({
+          error: 'Connection error',
+          message: 'Unable to fetch real-time data from DVSA. Please try again in a moment.',
+        }, { status: 503 });
       }
     }
 
@@ -80,12 +80,11 @@ export async function GET(request, { params }) {
     };
 
     // Derive Security & Provenance (Simulated for SaaS Demo)
-    const regHash = registration.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const provenance = {
-      is_stolen: regHash % 50 === 0, // 2% chance of being stolen
-      has_outstanding_finance: regHash % 7 === 0, // 14% chance of finance
-      write_off_category: regHash % 13 === 0 ? 'Cat N' : (regHash % 19 === 0 ? 'Cat S' : null),
-      previous_owners: (regHash % 5) + 1,
+      is_stolen: false,
+      has_outstanding_finance: registration === 'ML58FOU', // Example mock for one plate
+      write_off_category: registration === 'ML58FOU' ? 'Cat N' : null,
+      previous_owners: Math.floor(Math.random() * 4) + 1,
       market_valuation: {
         low: Math.floor(4500 * (1 - (engineLitres / 5))),
         average: Math.floor(5500 * (1 - (engineLitres / 5))),
@@ -95,7 +94,6 @@ export async function GET(request, { params }) {
 
     // Fetch Recalls from local model-matching database
     const recallData = await checkRecallsByMakeModel(vehicle.make_normalized || vehicle.make, vehicle.model_normalized || vehicle.model);
-
 
     // 1. Get outstanding recalls from the DVSA raw response (if available)
     const outstandingRecalls = vehicle.recalls || [];

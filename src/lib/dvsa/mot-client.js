@@ -34,13 +34,15 @@ async function motRequest(endpoint, retryCount = 0) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[MOT Client] Error response: ${response.status} ${errorText}`);
+      console.error(`[MOT Client] API ERROR for ${endpoint}: ${response.status} ${errorText}`);
       throw new Error(`MOT API error (${response.status}): ${errorText}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log(`[MOT Client] SUCCESS for ${endpoint}`);
+    return data;
   } catch (error) {
-    console.error(`[MOT Client] Request failed:`, error.message);
+    console.error(`[MOT Client] REQUEST FAILED for ${endpoint}:`, error.message);
     throw error;
   }
 }
