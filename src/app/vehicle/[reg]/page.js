@@ -54,10 +54,14 @@ export default function VehiclePage({ params }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/vehicle/${reg}`);
-      if (!res.ok) {
+      const res = await fetch(`/api/vehicle/${reg.replace(/\s/g, '').toUpperCase()}`);
+      if (res.status === 404) {
         const err = await res.json();
-        throw new Error(err.message || 'Vehicle not found');
+        setError(err.message || `The registration ${reg} could not be found.`);
+        return;
+      }
+      if (!res.ok) {
+        throw new Error('The MOT service is currently busy. Please try again in a moment.');
       }
       setData(await res.json());
     } catch (e) {
@@ -80,10 +84,20 @@ export default function VehiclePage({ params }) {
   if (error) return (
     <>
       <Header />
-      <div className="layout-container" style={{ marginTop: '4rem', alignItems: 'center' }}>
-        <h2>Vehicle Not Found</h2>
-        <p>{error}</p>
-        <button className="action-btn primary" onClick={fetchVehicle}>Try Again</button>
+      <div className="layout-container" style={{ marginTop: '6rem', textAlign: 'center', maxWidth: '600px' }}>
+        <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🔍</div>
+        <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1rem' }}>Vehicle Record Not Found</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem' }}>
+          {error || `We couldn't find any official records for "${reg}".`}
+        </p>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+          <a href="/" className="action-btn" style={{ textDecoration: 'none' }}>Back to Search</a>
+          <button className="action-btn primary" onClick={fetchVehicle}>Try Again</button>
+        </div>
+        <p style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+          Note: Brand new vehicles (less than 3 years old) may not have an MOT record yet. 
+          Please ensure the registration number is correct.
+        </p>
       </div>
     </>
   );
