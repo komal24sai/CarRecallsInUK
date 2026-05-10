@@ -1,18 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DodoPayments } from 'dodopayments-checkout';
 import './CheckoutModal.css';
 
-// Initialise the Dodo Payments SDK once when the module loads.
-// Mode is 'live' because your product is deployed on isthiscarsafe.co.uk.
-// Change to 'test' only while developing locally against test credentials.
+// Lazy-load the Dodo SDK only on the client side to avoid SSR crashes.
+// dodopayments-checkout accesses window/document at import time.
+let DodoPayments = null;
 let sdkInitialised = false;
 
-function initSDK(onEvent) {
+async function getSDK() {
+  if (DodoPayments) return DodoPayments;
+  const mod = await import('dodopayments-checkout');
+  DodoPayments = mod.DodoPayments;
+  return DodoPayments;
+}
+
+function initSDK(sdk, onEvent) {
   if (sdkInitialised) return;
-  DodoPayments.Initialize({
-    mode: 'live',
+  sdk.Initialize({
+    mode: 'live',          // change to 'test' for local dev with test credentials
     displayType: 'overlay',
     onEvent,
   });
@@ -24,36 +30,39 @@ export default function CheckoutModal({ isOpen, onClose, onPaymentSuccess, amoun
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Wire up SDK events
+  // Load and initialise SDK when modal first opens
   useEffect(() => {
-    initSDK((event) => {
-      switch (event.event_type) {
-        case 'checkout.opened':
-          setIsLoading(false);
-          break;
-        case 'checkout.redirect':
-          // Payment is processing / succeeded — close our modal wrapper
-          onPaymentSuccess?.();
-          onClose?.();
-          break;
-        case 'checkout.closed':
-          setIsLoading(false);
-          onClose?.();
-          break;
-        case 'checkout.error':
-          console.error('[Checkout] Error:', event.data?.message);
-          setError('Checkout encountered an error. Please try again.');
-          setIsLoading(false);
-          break;
-        case 'checkout.link_expired':
-          setError('Your checkout session expired. Please try again.');
-          setIsLoading(false);
-          break;
-        default:
-          break;
-      }
+    if (!isOpen) return;
+    getSDK().then((sdk) => {
+      initSDK(sdk, (event) => {
+        switch (event.event_type) {
+          case 'checkout.opened':
+            setIsLoading(false);
+            break;
+          case 'checkout.redirect':
+            // Payment completing — Dodo will redirect to return_url
+            onPaymentSuccess?.();
+            onClose?.();
+            break;
+          case 'checkout.closed':
+            setIsLoading(false);
+            onClose?.();
+            break;
+          case 'checkout.error':
+            console.error('[Checkout] Error:', event.data?.message);
+            setError('Checkout encountered an error. Please try again.');
+            setIsLoading(false);
+            break;
+          case 'checkout.link_expired':
+            setError('Your checkout session expired. Please try again.');
+            setIsLoading(false);
+            break;
+          default:
+            break;
+        }
+      });
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
 
@@ -92,7 +101,8 @@ export default function CheckoutModal({ isOpen, onClose, onPaymentSuccess, amoun
       }
 
       // 2. Open the Dodo overlay with the session URL
-      await DodoPayments.Checkout.open({
+      const sdk = await getSDK();
+      await sdk.Checkout.open({
         checkoutUrl: data.checkoutUrl,
         options: {
           showTimer: true,

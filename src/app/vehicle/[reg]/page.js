@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, use, useSearchParams } from 'react';
+import { useState, useEffect, use } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CheckoutModal from '@/components/payment/CheckoutModal';
@@ -20,7 +20,6 @@ export default function VehiclePage({ params }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const searchParams = useSearchParams();
 
   const addNotification = (notif) => {
     const id = Date.now();
@@ -37,7 +36,9 @@ export default function VehiclePage({ params }) {
 
   // Auto-unlock when Dodo redirects back with ?payment=success
   useEffect(() => {
-    if (searchParams.get('payment') === 'success' && !isUnlocked) {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
       setIsUnlocked(true);
       addNotification({
         title: '🎉 Report Unlocked!',
@@ -47,7 +48,7 @@ export default function VehiclePage({ params }) {
       // Clean the URL so it doesn't re-trigger on refresh
       window.history.replaceState({}, '', `/vehicle/${reg}`);
     }
-  }, [searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // runs once on mount — safe, client-only
 
   async function fetchVehicle() {
     setLoading(true);
