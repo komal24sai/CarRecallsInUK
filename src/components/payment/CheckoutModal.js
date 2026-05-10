@@ -18,7 +18,7 @@ async function getSDK() {
 function initSDK(sdk, onEvent) {
   if (sdkInitialised) return;
   sdk.Initialize({
-    mode: 'live',          // change to 'test' for local dev with test credentials
+    mode: 'test',          // 'live' when Dodo merchant account is approved for live payments
     displayType: 'overlay',
     onEvent,
   });
