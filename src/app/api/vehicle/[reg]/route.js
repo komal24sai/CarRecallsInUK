@@ -50,7 +50,7 @@ export async function GET(request, { params }) {
         if (!vehicle) {
           return NextResponse.json({
             error: 'Vehicle not found',
-            message: `No records found for registration ${registration}. Please try a demo plate like ML58FOU.`,
+            message: `No records found for registration ${registration}.`,
           }, { status: 404 });
         }
       }
@@ -80,11 +80,12 @@ export async function GET(request, { params }) {
     };
 
     // Derive Security & Provenance (Simulated for SaaS Demo)
+    const regHash = registration.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const provenance = {
-      is_stolen: false,
-      has_outstanding_finance: registration === 'ML58FOU', // Mock finance for this specific demo plate
-      write_off_category: registration === 'ML58FOU' ? 'Cat N' : null,
-      previous_owners: Math.floor(Math.random() * 4) + 1,
+      is_stolen: regHash % 50 === 0, // 2% chance of being stolen
+      has_outstanding_finance: regHash % 7 === 0, // 14% chance of finance
+      write_off_category: regHash % 13 === 0 ? 'Cat N' : (regHash % 19 === 0 ? 'Cat S' : null),
+      previous_owners: (regHash % 5) + 1,
       market_valuation: {
         low: Math.floor(4500 * (1 - (engineLitres / 5))),
         average: Math.floor(5500 * (1 - (engineLitres / 5))),
