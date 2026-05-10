@@ -62,7 +62,7 @@ export default function RecallsSearchPage() {
                 required 
                 value={make} 
                 onChange={e => setMake(e.target.value.toUpperCase())}
-                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-glass)', background: 'var(--bg-secondary)', color: 'white' }}
+                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-glass)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                 placeholder="Make"
               />
             </div>
@@ -73,7 +73,7 @@ export default function RecallsSearchPage() {
                 required 
                 value={model} 
                 onChange={e => setModel(e.target.value.toUpperCase())}
-                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-glass)', background: 'var(--bg-secondary)', color: 'white' }}
+                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-glass)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                 placeholder="Model"
               />
             </div>
@@ -87,7 +87,7 @@ export default function RecallsSearchPage() {
                 onChange={e => {
                   if (e.target.value.length <= 4) setYear(e.target.value);
                 }}
-                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-glass)', background: 'var(--bg-secondary)', color: 'white' }}
+                style={{ width: '100%', padding: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-glass)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
                 placeholder="YYYY"
               />
             </div>
