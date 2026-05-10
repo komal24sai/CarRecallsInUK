@@ -21,13 +21,13 @@ async function recallsRequest(endpoint, options = {}, retryCount = 0) {
       ...options,
       headers: {
         ...headers,
+        'Accept': 'application/json', // Sometimes v6 is too strict
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
 
     if (response.status === 401 && retryCount < 1) {
-      console.log('[Recalls Client] 401 received, refreshing token...');
       invalidateToken();
       return recallsRequest(endpoint, options, retryCount + 1);
     }
@@ -38,6 +38,7 @@ async function recallsRequest(endpoint, options = {}, retryCount = 0) {
 
     if (!response.ok) {
       const errorText = await response.text();
+      // Special case: API Key or Auth issues often return 403 or 400
       throw new Error(`Recalls API error (${response.status}): ${errorText}`);
     }
 
@@ -50,52 +51,72 @@ async function recallsRequest(endpoint, options = {}, retryCount = 0) {
 
 /**
  * Check recalls for a specific make and model
- * @param {string} make 
- * @param {string} model 
- * @returns {Promise<Object|null>}
  */
 export async function checkRecallsByMakeModel(make, model) {
   const makeUpper = make.toUpperCase();
   const modelUpper = model.toUpperCase();
   
-  try {
-    const data = await recallsRequest(
-      `/recalls/recall-type/vehicle/make/${encodeURIComponent(makeUpper)}/model/${encodeURIComponent(modelUpper)}`
-    );
-    
-    if (!data) return null;
+  // Try the most common endpoint patterns
+  const paths = [
+    `/recalls/recall-type/vehicle/make/${encodeURIComponent(makeUpper)}/model/${encodeURIComponent(modelUpper)}`,
+    `/recalls/vehicle/make/${encodeURIComponent(makeUpper)}/model/${encodeURIComponent(modelUpper)}`,
+    `/recalls/make/${encodeURIComponent(makeUpper)}/model/${encodeURIComponent(modelUpper)}`
+  ];
 
-    // Normalize the response to match the expected Bronze layer shape
-    // The API might return an array of recalls or an object containing a recalls array
-    return {
-      make: makeUpper,
-      model: modelUpper,
-      recalls: Array.isArray(data) ? data : (data.recalls || [])
-    };
-  } catch (error) {
-    console.error(`[Recalls Client] Failed to fetch recalls for ${make} ${model}:`, error.message);
-    // If the API fails or is offline, we return null so the system knows no REAL data was found
-    return null;
+  for (const path of paths) {
+    try {
+      const data = await recallsRequest(path);
+      if (data) {
+        return {
+          make: makeUpper,
+          model: modelUpper,
+          recalls: Array.isArray(data) ? data : (data.recalls || [])
+        };
+      }
+    } catch (e) {
+      console.warn(`[Recalls Client] Path failed: ${path}`, e.message);
+    }
   }
+  
+  return null;
 }
 
 /**
  * Search recalls by make
- * @param {string} make - Vehicle manufacturer
- * @returns {Promise<Object|null>}
  */
 export async function getRecallsByMake(make) {
-  const data = await recallsRequest(
-    `/recalls/recall-type/vehicle/make/${encodeURIComponent(make)}`
-  );
-  return data;
+  const makeUpper = make.toUpperCase();
+  const paths = [
+    `/recalls/recall-type/vehicle/make/${encodeURIComponent(makeUpper)}`,
+    `/recalls/vehicle/make/${encodeURIComponent(makeUpper)}`,
+    `/recalls/make/${encodeURIComponent(makeUpper)}`
+  ];
+
+  for (const path of paths) {
+    try {
+      const data = await recallsRequest(path);
+      if (data) return data;
+    } catch (e) {
+      console.warn(`[Recalls Client] Path failed: ${path}`, e.message);
+    }
+  }
+  
+  return null;
 }
 
 /**
- * Get all available vehicle makes with recall data
- * @returns {Promise<Object|null>}
+ * Get all available vehicle makes
  */
 export async function getRecallMakes() {
-  const data = await recallsRequest('/recalls/recall-type/vehicle');
-  return data;
+  const paths = ['/recalls/recall-type/vehicle', '/recalls/vehicle', '/recalls/makes'];
+  for (const path of paths) {
+    try {
+      const data = await recallsRequest(path);
+      if (data) return data;
+    } catch (e) {
+      console.warn(`[Recalls Client] Path failed: ${path}`, e.message);
+    }
+  }
+  return null;
 }
+
