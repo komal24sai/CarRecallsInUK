@@ -46,18 +46,26 @@ export async function POST(request) {
     return NextResponse.json({ received: true });
   }
 
+  const secret = process.env.DODO_PAYMENTS_WEBHOOK_SECRET;
+  console.log(`[Webhook Debug] Secret configured: ${!!secret}, Length: ${secret?.length}, Prefix: ${secret?.substring(0, 5)}`);
+
+  const headersObj = {
+    'webhook-id': webhookId ?? '',
+    'webhook-signature': webhookSignature ?? '',
+    'webhook-timestamp': webhookTimestamp ?? '',
+  };
+
+  console.log(`[Webhook Debug] Headers:`, JSON.stringify(headersObj));
+
   let event;
   try {
     event = dodo.webhooks.unwrap(rawBody, {
-      headers: {
-        'webhook-id': webhookId ?? '',
-        'webhook-signature': webhookSignature ?? '',
-        'webhook-timestamp': webhookTimestamp ?? '',
-      },
+      headers: headersObj,
     });
   } catch (err) {
-    console.error('[Webhook] Signature verification failed:', err.message);
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    console.error('[Webhook Error] Signature verification failed:', err.message);
+    console.error('[Webhook Error] Raw Body Length:', rawBody.length);
+    return NextResponse.json({ error: 'Invalid signature', details: err.message }, { status: 401 });
   }
 
   // Acknowledge immediately, process async
