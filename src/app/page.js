@@ -3,15 +3,27 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { isValidUKRegistration } from '@/lib/validation';
 
 export default function HomePage() {
   const [reg, setReg] = useState('');
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleSearch = (e) => {
     e.preventDefault();
     const cleaned = reg.replace(/\s/g, '').toUpperCase();
-    if (cleaned.length >= 2) router.push(`/vehicle/${cleaned}`);
+    if (isValidUKRegistration(cleaned)) {
+      router.push(`/vehicle/${cleaned}`);
+    } else {
+      setError('Please enter a valid UK registration number (e.g. AB12 CDE)');
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const value = e.target.value.toUpperCase();
+    setReg(value);
+    if (error) setError(''); // Clear error on change
   };
 
   return (
@@ -35,20 +47,26 @@ export default function HomePage() {
             </p>
             <div className="search-container">
               <form onSubmit={handleSearch}>
-                <div className="search-box">
+                <div className={`search-box ${error ? 'search-box-error' : ''}`}>
                   <input
                     type="text"
                     className="search-input"
                     placeholder="Enter UK registration (e.g. AB12 CDE)"
                     value={reg}
-                    onChange={(e) => setReg(e.target.value.toUpperCase())}
+                    onChange={handleInputChange}
                     maxLength={8}
                     id="registration-search"
+                    style={error ? { borderColor: 'var(--accent-red)' } : {}}
                   />
-                  <button type="submit" className="search-btn" disabled={reg.replace(/\s/g, '').length < 2}>
+                  <button 
+                    type="submit" 
+                    className="search-btn" 
+                    disabled={!isValidUKRegistration(reg)}
+                  >
                     🔍 Check Vehicle
                   </button>
                 </div>
+                {error && <p style={{ color: 'var(--accent-red)', fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: '600' }}>{error}</p>}
               </form>
               <p className="search-hint">Enter any UK number plate to view full MOT history &amp; safety analysis</p>
             </div>
