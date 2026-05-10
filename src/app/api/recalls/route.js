@@ -15,30 +15,47 @@ export async function GET(request) {
     await ingestRecallData(make.toUpperCase(), model.toUpperCase());
     
     // 2. Fetch from DB
-    let recalls = getBronzeRecallData(make.toUpperCase(), model.toUpperCase());
+    const allRecalls = getBronzeRecallData(make.toUpperCase(), model.toUpperCase());
+    let filteredRecalls = [...allRecalls];
 
     // 3. Filter by year if provided
-    if (year && recalls.length > 0) {
+    if (year && allRecalls.length > 0) {
       const targetYear = parseInt(year, 10);
-      recalls = recalls.filter(recall => {
-        // If there's no build date, we can't filter, so keep it to be safe
+      filteredRecalls = allRecalls.filter(recall => {
         if (!recall.build_start && !recall.build_end) return true;
         
         let inRange = false;
+        const startYear = recall.build_start ? new Date(recall.build_start).getFullYear() : 1900;
+        const endYear = recall.build_end ? new Date(recall.build_end).getFullYear() : new Date().getFullYear() + 1;
         
-        if (recall.build_start && recall.build_end) {
-          const startYear = new Date(recall.build_start).getFullYear();
-          const endYear = new Date(recall.build_end).getFullYear();
-          if (targetYear >= startYear && targetYear <= endYear) inRange = true;
-        } else if (recall.build_start) {
-          const startYear = new Date(recall.build_start).getFullYear();
-          if (targetYear >= startYear) inRange = true;
-        } else if (recall.build_end) {
-          const endYear = new Date(recall.build_end).getFullYear();
-          if (targetYear <= endYear) inRange = true;
-        }
-
+        if (targetYear >= startYear && targetYear <= endYear) inRange = true;
         return inRange;
+      });
+    }
+
+    // 4. Partition by year if NO year is provided
+    let partitioned = null;
+    if (!year && allRecalls.length > 0) {
+      partitioned = {};
+      allRecalls.forEach(recall => {
+        const startYear = recall.build_start ? new Date(recall.build_start).getFullYear() : null;
+        const endYear = recall.build_end ? new Date(recall.build_end).getFullYear() : null;
+        
+        if (startYear && endYear) {
+          for (let y = startYear; y <= endYear; y++) {
+            if (!partitioned[y]) partitioned[y] = [];
+            if (!partitioned[y].find(r => r.recall_number === recall.recall_number)) {
+              partitioned[y].push(recall);
+            }
+          }
+        } else if (startYear || endYear) {
+          const y = startYear || endYear;
+          if (!partitioned[y]) partitioned[y] = [];
+          partitioned[y].push(recall);
+        } else {
+          if (!partitioned['Unknown']) partitioned['Unknown'] = [];
+          partitioned['Unknown'].push(recall);
+        }
       });
     }
 
@@ -46,8 +63,9 @@ export async function GET(request) {
       make: make.toUpperCase(),
       model: model.toUpperCase(),
       year: year || 'All',
-      totalRecalls: recalls.length,
-      recalls
+      totalRecalls: filteredRecalls.length,
+      recalls: filteredRecalls,
+      partitioned: partitioned // Will be null if year was provided
     });
   } catch (error) {
     console.error('Recalls API Error:', error);

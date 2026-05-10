@@ -117,32 +117,31 @@ export default function RecallsSearchPage() {
                 <h3>No Safety Recalls Found</h3>
                 <p style={{ color: 'var(--text-secondary)' }}>The DVSA has not issued any safety recalls for this specific Make, Model, and Year combination.</p>
               </div>
+            ) : results.partitioned ? (
+              /* NO YEAR ENTERED: Show Partitioned View */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+                {Object.keys(results.partitioned)
+                  .sort((a, b) => (b === 'Unknown' ? -1 : a === 'Unknown' ? 1 : parseInt(b) - parseInt(a)))
+                  .map(yearKey => (
+                    <div key={yearKey}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent-blue)' }}>{yearKey}</h2>
+                        <div style={{ height: '2px', flex: 1, background: 'var(--border-glass)' }}></div>
+                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 600 }}>{results.partitioned[yearKey].length} Recalls</span>
+                      </div>
+                      <div style={{ display: 'grid', gap: '1.5rem' }}>
+                        {results.partitioned[yearKey].map((recall, i) => (
+                          <RecallCard key={`${yearKey}-${i}`} recall={recall} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+              </div>
             ) : (
+              /* YEAR ENTERED: Show Flat List */
               <div style={{ display: 'grid', gap: '1rem' }}>
                 {results.recalls.map((recall, i) => (
-                  <div key={i} className="card" style={{ borderLeft: '4px solid var(--accent-red)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-                      <div>
-                        <div style={{ color: 'var(--accent-red)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.2rem' }}>Recall Ref: {recall.recall_number}</div>
-                        <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{recall.concern}</h3>
-                      </div>
-                      <div className="vehicle-tags">
-                        <span className="tag">Builds: {recall.build_start || 'Unknown'} to {recall.build_end || 'Unknown'}</span>
-                        <span className="tag">Issued: {recall.recalled_date || 'Unknown'}</span>
-                      </div>
-                    </div>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '1rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>
-                      <div>
-                        <strong style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>The Defect</strong>
-                        <p style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>{recall.defect}</p>
-                      </div>
-                      <div>
-                        <strong style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>The Remedy</strong>
-                        <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{recall.remedy}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <RecallCard key={i} recall={recall} />
                 ))}
               </div>
             )}
@@ -153,3 +152,35 @@ export default function RecallsSearchPage() {
     </>
   );
 }
+
+/**
+ * Sub-component for individual Recall Card to keep code clean
+ */
+function RecallCard({ recall }) {
+  return (
+    <div className="card" style={{ borderLeft: '4px solid var(--accent-red)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div style={{ color: 'var(--accent-red)', fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.2rem' }}>Recall Ref: {recall.recall_number}</div>
+          <h3 style={{ fontSize: '1.2rem', margin: 0 }}>{recall.concern}</h3>
+        </div>
+        <div className="vehicle-tags">
+          <span className="tag">Builds: {recall.build_start || 'Unknown'} to {recall.build_end || 'Unknown'}</span>
+          <span className="tag">Issued: {recall.recalled_date || 'Unknown'}</span>
+        </div>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginTop: '1rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>
+        <div>
+          <strong style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>The Defect</strong>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>{recall.defect}</p>
+        </div>
+        <div>
+          <strong style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>The Remedy</strong>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{recall.remedy}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
