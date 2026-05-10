@@ -7,11 +7,6 @@
 import { NextResponse } from 'next/server';
 import DodoPayments from 'dodopayments';
 
-const dodo = new DodoPayments({
-  bearerToken: process.env.DODO_PAYMENTS_API_KEY,
-  environment: 'live_mode', // switch to 'test_mode' while testing
-});
-
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -24,6 +19,21 @@ export async function POST(request) {
       );
     }
 
+    // Validate env vars are present
+    if (!process.env.DODO_PAYMENTS_API_KEY) {
+      console.error('[Checkout] DODO_PAYMENTS_API_KEY is not set');
+      return NextResponse.json({ error: 'Payment service not configured (API key missing)' }, { status: 500 });
+    }
+    if (!process.env.DODO_PAYMENTS_PRODUCT_ID) {
+      console.error('[Checkout] DODO_PAYMENTS_PRODUCT_ID is not set');
+      return NextResponse.json({ error: 'Payment service not configured (product ID missing)' }, { status: 500 });
+    }
+
+    const dodo = new DodoPayments({
+      bearerToken: process.env.DODO_PAYMENTS_API_KEY,
+      environment: process.env.DODO_PAYMENTS_ENVIRONMENT || 'live_mode',
+    });
+
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://isthiscarsafe.co.uk';
 
     const payment = await dodo.payments.create({
@@ -31,8 +41,8 @@ export async function POST(request) {
         city: 'London',
         country: 'GB',
         state: 'England',
-        street: '',
-        zipcode: '',
+        street: '1 Example Street',
+        zipcode: 'EC1A 1BB',
       },
       customer: {
         email,
@@ -53,17 +63,26 @@ export async function POST(request) {
       },
     });
 
+    console.log('[Checkout] Created payment session:', payment.payment_id, 'for', registration);
+
     return NextResponse.json({
       success: true,
       checkoutUrl: payment.payment_link,
       paymentId: payment.payment_id,
     });
   } catch (error) {
-    console.error('[Checkout] Dodo Payments error:', error);
+    // Log full error details server-side always
+    console.error('[Checkout] Dodo Payments error:', {
+      message: error.message,
+      status: error.status,
+      body: error.error,
+    });
     return NextResponse.json(
       {
         error: 'Failed to create checkout session',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        // Show details in all environments to help diagnose
+        details: error.message,
+        dodoError: error.error,
       },
       { status: 500 }
     );
