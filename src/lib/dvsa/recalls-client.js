@@ -48,46 +48,35 @@ async function recallsRequest(endpoint, options = {}, retryCount = 0) {
   }
 }
 
+/**
+ * Check recalls for a specific make and model
+ * @param {string} make 
+ * @param {string} model 
+ * @returns {Promise<Object|null>}
+ */
 export async function checkRecallsByMakeModel(make, model) {
-  // The official tapi.dvsa.gov.uk endpoint is offline/deprecated.
-  // We mock the response to ensure the Investor SaaS demo functions perfectly.
   const makeUpper = make.toUpperCase();
   const modelUpper = model.toUpperCase();
   
-  // Return dummy data for any make/model to ensure the UI always populates for the demo
-  return {
-    make: makeUpper,
-    model: modelUpper,
-    recalls: [
-      {
-        recall_number: `R${Math.floor(Math.random() * 9000) + 1000}/1`,
-        concern: "Airbag Inflator May Rupture",
-        defect: "The driver frontal airbag inflator may rupture upon deployment due to propellant degradation occurring after long-term exposure to high absolute humidity and temperature cycling.",
-        remedy: "Dealers will replace the driver frontal airbag inflator with a newly manufactured unit, free of charge.",
-        build_start: "2006-01-01",
-        build_end: "2010-12-31",
-        recalled_date: "2015-08-14"
-      },
-      {
-        recall_number: `R${Math.floor(Math.random() * 9000) + 1000}/2`,
-        concern: "ABS Module Electrical Short",
-        defect: "An electrical short may occur in the Anti-lock Brake System (ABS) control module, increasing the risk of an engine compartment fire while driving or parked.",
-        remedy: "Dealers will inspect the ABS module and, if necessary, replace it and install a protective fuse inline, free of charge.",
-        build_start: "2008-05-15",
-        build_end: "2012-03-22",
-        recalled_date: "2018-02-09"
-      },
-      {
-        recall_number: `R${Math.floor(Math.random() * 9000) + 1000}/3`,
-        concern: "Steering Rack Pinion Failure",
-        defect: "The steering rack pinion gear may have been manufactured with insufficient hardening, potentially leading to loss of steering control.",
-        remedy: "Dealers will replace the entire steering rack assembly, free of charge.",
-        build_start: "2007-11-01",
-        build_end: "2009-08-30",
-        recalled_date: "2011-11-20"
-      }
-    ]
-  };
+  try {
+    const data = await recallsRequest(
+      `/recalls/recall-type/vehicle/make/${encodeURIComponent(makeUpper)}/model/${encodeURIComponent(modelUpper)}`
+    );
+    
+    if (!data) return null;
+
+    // Normalize the response to match the expected Bronze layer shape
+    // The API might return an array of recalls or an object containing a recalls array
+    return {
+      make: makeUpper,
+      model: modelUpper,
+      recalls: Array.isArray(data) ? data : (data.recalls || [])
+    };
+  } catch (error) {
+    console.error(`[Recalls Client] Failed to fetch recalls for ${make} ${model}:`, error.message);
+    // If the API fails or is offline, we return null so the system knows no REAL data was found
+    return null;
+  }
 }
 
 /**
