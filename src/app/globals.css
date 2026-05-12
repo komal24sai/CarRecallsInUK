@@ -393,12 +393,12 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--bg-glass);
-  border: 1px solid var(--border-glass);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 0.4rem 1rem;
   border-radius: 50px;
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: #e2e8f0;
   margin-bottom: 1.5rem;
   animation: fadeInUp 0.6s ease-out;
 }
@@ -416,6 +416,7 @@ a {
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 800;
   line-height: 1.1;
+  color: #ffffff;
   margin-bottom: 1.2rem;
   animation: fadeInUp 0.6s ease-out 0.1s both;
 }
@@ -428,7 +429,7 @@ a {
 
 .hero p {
   font-size: 1.15rem;
-  color: var(--text-secondary);
+  color: #cbd5e1;
   max-width: 600px;
   margin: 0 auto 2rem;
   animation: fadeInUp 0.6s ease-out 0.2s both;
@@ -498,7 +499,7 @@ a {
 
 .search-hint {
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: #94a3b8;
   margin-top: 0.75rem;
 }
 
