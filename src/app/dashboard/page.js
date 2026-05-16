@@ -8,7 +8,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/analytics').then(r => r.json()).then(d => {
+    const storedSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+    
+    if (storedSearches.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    const regsQuery = storedSearches.join(',');
+    
+    fetch(`/api/analytics?regs=${regsQuery}`).then(r => r.json()).then(d => {
       setMetrics(d.metrics);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -19,8 +28,8 @@ export default function DashboardPage() {
       <Header />
       <div className="dashboard">
         <div className="section-header" style={{ textAlign: 'left', marginBottom: '2rem' }}>
-          <h2>📊 Analytics Dashboard</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Gold layer aggregations from processed DVSA data</p>
+          <h2>📊 Your Dashboard</h2>
+          <p style={{ color: 'var(--text-secondary)' }}>Aggregated metrics from your recently searched vehicles</p>
         </div>
 
         <div className="metrics-grid">

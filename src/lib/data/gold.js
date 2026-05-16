@@ -104,43 +104,65 @@ export function getDefectDistribution(registration) {
 }
 
 /**
- * Get dashboard metrics (aggregate across all vehicles in the system)
+ * Get dashboard metrics (aggregate across all vehicles in the system or filtered by specific registrations)
  */
-export function getDashboardMetrics() {
+export function getDashboardMetrics(regs = null) {
   const db = getDb();
   const metrics = {};
 
-  const vehicleCount = db.prepare('SELECT COUNT(*) as count FROM silver_vehicles').get();
+  let whereClauseVehicles = '';
+  let whereClauseHistory = '';
+  let whereClauseDefects = '';
+  let whereClauseTimeline = '';
+  let whereClauseGold = '';
+  let queryParams = [];
+
+  if (regs && Array.isArray(regs) && regs.length > 0) {
+    const placeholders = regs.map(() => '?').join(',');
+    whereClauseVehicles = `WHERE registration IN (${placeholders})`;
+    whereClauseHistory = `WHERE registration IN (${placeholders})`;
+    whereClauseDefects = `WHERE registration IN (${placeholders})`;
+    whereClauseTimeline = `WHERE registration IN (${placeholders}) AND anomaly_flag = 1`;
+    whereClauseGold = `WHERE registration IN (${placeholders})`;
+    queryParams = regs;
+  } else {
+    whereClauseTimeline = `WHERE anomaly_flag = 1`;
+  }
+
+  const vehicleCount = db.prepare(`SELECT COUNT(*) as count FROM silver_vehicles ${whereClauseVehicles}`).get(...queryParams);
   metrics.totalVehicles = vehicleCount?.count || 0;
 
-  const testCount = db.prepare('SELECT COUNT(*) as count FROM silver_mot_history').get();
+  const testCount = db.prepare(`SELECT COUNT(*) as count FROM silver_mot_history ${whereClauseHistory}`).get(...queryParams);
   metrics.totalMOTTests = testCount?.count || 0;
 
   const passRate = db.prepare(
-    "SELECT ROUND(AVG(CASE WHEN test_result = 'PASSED' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate FROM silver_mot_history"
-  ).get();
+    `SELECT ROUND(AVG(CASE WHEN test_result = 'PASSED' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate FROM silver_mot_history ${whereClauseHistory}`
+  ).get(...queryParams);
   metrics.avgPassRate = passRate?.rate || 0;
 
-  const defectCount = db.prepare('SELECT COUNT(*) as count FROM silver_defects').get();
+  const defectCount = db.prepare(`SELECT COUNT(*) as count FROM silver_defects ${whereClauseDefects}`).get(...queryParams);
   metrics.totalDefects = defectCount?.count || 0;
 
   const topDefects = db.prepare(`
     SELECT category, COUNT(*) as count FROM silver_defects
+    ${whereClauseDefects}
     GROUP BY category ORDER BY count DESC LIMIT 5
-  `).all();
+  `).all(...queryParams);
   metrics.topDefectCategories = topDefects;
 
-  const mileageAnomalies = db.prepare('SELECT COUNT(*) as count FROM silver_mileage_timeline WHERE anomaly_flag = 1').get();
+  const mileageAnomalies = db.prepare(`SELECT COUNT(*) as count FROM silver_mileage_timeline ${whereClauseTimeline}`).get(...queryParams);
   metrics.mileageAnomalies = mileageAnomalies?.count || 0;
 
-  const avgScore = db.prepare('SELECT ROUND(AVG(safety_score), 1) as avg FROM gold_vehicle_safety_score').get();
+  const avgScore = db.prepare(`SELECT ROUND(AVG(safety_score), 1) as avg FROM gold_vehicle_safety_score ${whereClauseGold}`).get(...queryParams);
   metrics.avgSafetyScore = avgScore?.avg || 0;
 
   const makeStats = db.prepare(`
     SELECT make_normalized as make, COUNT(*) as count,
     ROUND(AVG(total_passes * 100.0 / NULLIF(total_mot_tests, 0)), 1) as avg_pass_rate
-    FROM silver_vehicles GROUP BY make_normalized ORDER BY count DESC LIMIT 10
-  `).all();
+    FROM silver_vehicles 
+    ${whereClauseVehicles}
+    GROUP BY make_normalized ORDER BY count DESC LIMIT 10
+  `).all(...queryParams);
   metrics.topMakes = makeStats;
 
   return metrics;

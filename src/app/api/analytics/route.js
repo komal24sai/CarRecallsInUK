@@ -6,9 +6,17 @@
 import { NextResponse } from 'next/server';
 import { getDashboardMetrics } from '@/lib/data/gold';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const metrics = getDashboardMetrics();
+    const { searchParams } = new URL(request.url);
+    const regsParam = searchParams.get('regs');
+    let regs = null;
+    
+    if (regsParam) {
+      regs = regsParam.split(',').map(r => r.trim()).filter(Boolean);
+    }
+
+    const metrics = getDashboardMetrics(regs);
     return NextResponse.json({ success: true, metrics });
   } catch (error) {
     console.error('[API] Analytics error:', error);

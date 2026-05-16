@@ -63,7 +63,16 @@ export default function VehiclePage({ params }) {
       if (!res.ok) {
         throw new Error('The MOT service is currently busy. Please try again in a moment.');
       }
-      setData(await res.json());
+      const responseData = await res.json();
+      setData(responseData);
+
+      // Save to local storage for the personal dashboard
+      if (typeof window !== 'undefined') {
+        const storedSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        if (!storedSearches.includes(reg)) {
+          localStorage.setItem('recentSearches', JSON.stringify([reg, ...storedSearches].slice(0, 50)));
+        }
+      }
     } catch (e) {
       setError(e.message);
     } finally {
