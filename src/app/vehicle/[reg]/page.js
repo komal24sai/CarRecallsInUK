@@ -460,6 +460,7 @@ export default function VehiclePage({ params }) {
               <div className="detail-item"><span className="detail-label">Engine</span><span className="detail-value">{vehicle?.engine_size_cc}cc</span></div>
               <div className="detail-item"><span className="detail-label">Latest Mileage</span><span className="detail-value">{vehicle?.latest_mileage?.toLocaleString()} mi</span></div>
               <div className="detail-item"><span className="detail-label">MOT Expiry</span><span className="detail-value text-green">{vehicle?.mot_expiry_date}</span></div>
+              <div className="detail-item"><span className="detail-label">Year of Manufacture</span><span className="detail-value">{vehicle?.manufacture_year || (vehicle?.first_used_date ? new Date(vehicle.first_used_date).getFullYear() : 'N/A')}</span></div>
               
               {/* Added Free Data points */}
               <div className="detail-item"><span className="detail-label">Body / Doors</span><span className="detail-value">Hatchback / 5 Doors</span></div>
