@@ -463,14 +463,14 @@ export default function VehiclePage({ params }) {
               <div className="detail-item"><span className="detail-label">Year of Manufacture</span><span className="detail-value">{vehicle?.manufacture_year || (vehicle?.first_used_date ? new Date(vehicle.first_used_date).getFullYear() : 'N/A')}</span></div>
               
               {/* Added Free Data points */}
-              <div className="detail-item"><span className="detail-label">Body / Doors</span><span className="detail-value">Hatchback / 5 Doors</span></div>
-              <div className="detail-item"><span className="detail-label">Gearbox</span><span className="detail-value">Manual (5 Gears)</span></div>
-              <div className="detail-item"><span className="detail-label">Country of Origin</span><span className="detail-value">Germany</span></div>
-              <div className="detail-item"><span className="detail-label">Power (BHP)</span><span className="detail-value">100 BHP</span></div>
-              <div className="detail-item"><span className="detail-label">Top Speed</span><span className="detail-value">112 MPH</span></div>
-              <div className="detail-item"><span className="detail-label">Dimensions</span><span className="detail-value">L: 4337mm W: 2019mm</span></div>
-              <div className="detail-item"><span className="detail-label">Kerb Weight</span><span className="detail-value">1227 KG</span></div>
-              <div className="detail-item"><span className="detail-label">Engine Layout</span><span className="detail-value">4 Cylinders / 16 Valves</span></div>
+              <div className="detail-item"><span className="detail-label">Body / Doors</span><span className="detail-value">{vehicle?.body_type ? `${vehicle.body_type}${vehicle.doors ? ` / ${vehicle.doors} Doors` : ''}` : 'N/A'}</span></div>
+              <div className="detail-item"><span className="detail-label">Gearbox</span><span className="detail-value">{vehicle?.transmission || vehicle?.gearbox || 'N/A'}</span></div>
+              <div className="detail-item"><span className="detail-label">Country of Origin</span><span className="detail-value">{vehicle?.country_of_origin || 'N/A'}</span></div>
+              <div className="detail-item"><span className="detail-label">Power (BHP)</span><span className="detail-value">{vehicle?.power_bhp ? `${vehicle.power_bhp} BHP` : 'N/A'}</span></div>
+              <div className="detail-item"><span className="detail-label">Top Speed</span><span className="detail-value">{vehicle?.top_speed_mph ? `${vehicle.top_speed_mph} MPH` : 'N/A'}</span></div>
+              <div className="detail-item"><span className="detail-label">Dimensions</span><span className="detail-value">{vehicle?.length_mm && vehicle?.width_mm ? `L: ${vehicle.length_mm}mm W: ${vehicle.width_mm}mm` : 'N/A'}</span></div>
+              <div className="detail-item"><span className="detail-label">Kerb Weight</span><span className="detail-value">{vehicle?.kerb_weight_kg || vehicle?.revenue_weight ? `${vehicle.kerb_weight_kg || vehicle.revenue_weight} KG` : 'N/A'}</span></div>
+              <div className="detail-item"><span className="detail-label">Engine Layout</span><span className="detail-value">{vehicle?.cylinders ? `${vehicle.cylinders} Cylinders${vehicle.valves ? ` / ${vehicle.valves} Valves` : ''}` : 'N/A'}</span></div>
               <div className="detail-item"><span className="detail-label">V5C Count</span><span className="detail-value">{provenance?.v5c_count || vehicle?.v5c_count || 2}</span></div>
               <div className="detail-item"><span className="detail-label">Last V5C Issue</span><span className="detail-value">{provenance?.last_v5c_issue_date || vehicle?.last_v5c_issue_date || 'N/A'}</span></div>
               
