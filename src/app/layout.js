@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "CarRecalls UK — Vehicle Safety Intelligence Powered by DVSA",
+  title: "isthiscarsafe — Vehicle Safety Intelligence Powered by DVSA",
   description: "Check MOT history, safety recalls, and vehicle risk scores for any UK-registered vehicle. Powered by official DVSA data with Bronze→Silver→Gold data engineering.",
   keywords: "MOT history, vehicle recalls, DVSA, car safety, UK vehicle check",
 };

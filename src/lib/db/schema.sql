@@ -1,5 +1,5 @@
 -- ============================================
--- CarRecalls UK — Database Schema
+-- isthiscarsafe — Database Schema
 -- Medallion Architecture: Bronze → Silver → Gold
 -- ============================================
 

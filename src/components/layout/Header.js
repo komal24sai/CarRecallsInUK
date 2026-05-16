@@ -43,7 +43,7 @@ export default function Header() {
         <div className="header-inner">
           <div className="header-brand">
             <a href="/" className="logo">
-              <span className="logo-flag">🇬🇧</span> CarRecalls UK
+              <span className="logo-flag">🇬🇧</span> isthiscarsafe
             </a>
             <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation">
               {menuOpen ? (
