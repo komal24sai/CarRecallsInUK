@@ -334,7 +334,7 @@ export default function VehiclePage({ params }) {
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>This Vehicle's Pass Rate</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>This Car's Reliability Rating (MOT Pass Rate)</span>
                   <strong style={{ color: 'var(--accent-red)' }}>{vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%</strong>
                 </div>
                 <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '4px' }}>
@@ -352,11 +352,11 @@ export default function VehiclePage({ params }) {
               
               {data?.marketComparison?.worseThanPercent > 50 ? (
                 <div style={{ background: 'rgba(239,68,68,0.1)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--accent-red)' }}>
-                  <strong>Market Warning:</strong> This vehicle performs <strong>worse than {data.marketComparison.worseThanPercent}%</strong> of identical {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s in the UK market.
+                  <strong>⚠️ Buyer Warning:</strong> This car has failed its MOT tests and required repairs more often than <strong>{data.marketComparison.worseThanPercent}%</strong> of other {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s on the road. You should budget for higher maintenance costs.
                 </div>
               ) : (
                 <div style={{ background: 'rgba(34,197,94,0.1)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--accent-green)' }}>
-                  <strong>Market Leader:</strong> This vehicle performs <strong>better than {100 - (data?.marketComparison?.worseThanPercent || 50)}%</strong> of identical {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s in the UK market.
+                  <strong>🏆 Great Find:</strong> This car has passed its MOT tests more consistently than <strong>{100 - (data?.marketComparison?.worseThanPercent || 50)}%</strong> of other {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s on the road. It has a proven, strong reliability record.
                 </div>
               )}
               
