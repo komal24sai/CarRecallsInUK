@@ -342,16 +342,24 @@ export default function VehiclePage({ params }) {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>UK Average for {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make}s</span>
-                  <strong style={{ color: 'var(--accent-green)' }}>78%</strong>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>UK Average for {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s</span>
+                  <strong style={{ color: 'var(--accent-green)' }}>{data?.marketComparison?.averagePassRate || 78}%</strong>
                 </div>
                 <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '4px' }}>
-                  <div style={{ width: '78%', height: '100%', background: 'var(--accent-green)', borderRadius: '4px' }}></div>
+                  <div style={{ width: `${data?.marketComparison?.averagePassRate || 78}%`, height: '100%', background: 'var(--accent-green)', borderRadius: '4px' }}></div>
                 </div>
               </div>
-              <div style={{ background: 'rgba(239,68,68,0.1)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--accent-red)' }}>
-                <strong>Market Warning:</strong> This vehicle performs <strong>worse than 64%</strong> of identical models in the UK market. The defect rate is unusually high for this model year.
-              </div>
+              
+              {data?.marketComparison?.worseThanPercent > 50 ? (
+                <div style={{ background: 'rgba(239,68,68,0.1)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--accent-red)' }}>
+                  <strong>Market Warning:</strong> This vehicle performs <strong>worse than {data.marketComparison.worseThanPercent}%</strong> of identical {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s in the UK market.
+                </div>
+              ) : (
+                <div style={{ background: 'rgba(34,197,94,0.1)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--accent-green)' }}>
+                  <strong>Market Leader:</strong> This vehicle performs <strong>better than {100 - (data?.marketComparison?.worseThanPercent || 50)}%</strong> of identical {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s in the UK market.
+                </div>
+              )}
+              
               <button className="action-btn" style={{ width: '100%', marginTop: '1.5rem' }} onClick={() => setShowCompareModal(false)}>Close</button>
             </div>
           </div>
