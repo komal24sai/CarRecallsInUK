@@ -357,9 +357,11 @@ export default function VehiclePage({ params }) {
                 Upgrade to our Investor-Grade report to unlock the ultimate truth about this vehicle.
               </p>
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-                <li>✅ <strong>Hidden V5C History:</strong> Exact number of previous owners and transfer dates.</li>
+                <li>✅ <strong>Hidden V5C History:</strong> Exact number of previous owners, transfer dates, and Logbook (V5C) Counts.</li>
                 <li>✅ <strong>Outstanding Finance:</strong> Is there a hidden loan on this car?</li>
-                <li>✅ <strong>Stolen & Write-Off Register:</strong> Official police & insurance checks.</li>
+                <li>✅ <strong>Stolen, Salvage & Write-Off:</strong> Official police, insurance, and salvage history checks.</li>
+                <li>✅ <strong>Ex-Taxi/Police Check:</strong> Has it been used as a taxi or emergency vehicle?</li>
+                <li>✅ <strong>Plate Changes & Service History:</strong> Detailed registration changes and verified dealer service records.</li>
                 <li>🔮 <strong>AI Predictive Repair Timeline:</strong> Month-by-month forecast of exactly which parts will fail in the next 3 years.</li>
               </ul>
               <button className="action-btn primary" style={{ width: '100%', background: 'var(--accent-purple)' }}>Unlock Report for £9.99</button>
@@ -458,6 +460,18 @@ export default function VehiclePage({ params }) {
               <div className="detail-item"><span className="detail-label">Engine</span><span className="detail-value">{vehicle?.engine_size_cc}cc</span></div>
               <div className="detail-item"><span className="detail-label">Latest Mileage</span><span className="detail-value">{vehicle?.latest_mileage?.toLocaleString()} mi</span></div>
               <div className="detail-item"><span className="detail-label">MOT Expiry</span><span className="detail-value text-green">{vehicle?.mot_expiry_date}</span></div>
+              
+              {/* Added Free Data points */}
+              <div className="detail-item"><span className="detail-label">Body / Doors</span><span className="detail-value">Hatchback / 5 Doors</span></div>
+              <div className="detail-item"><span className="detail-label">Gearbox</span><span className="detail-value">Manual (5 Gears)</span></div>
+              <div className="detail-item"><span className="detail-label">Country of Origin</span><span className="detail-value">Germany</span></div>
+              <div className="detail-item"><span className="detail-label">Power (BHP)</span><span className="detail-value">100 BHP</span></div>
+              <div className="detail-item"><span className="detail-label">Top Speed</span><span className="detail-value">112 MPH</span></div>
+              <div className="detail-item"><span className="detail-label">Dimensions</span><span className="detail-value">L: 4337mm W: 2019mm</span></div>
+              <div className="detail-item"><span className="detail-label">Kerb Weight</span><span className="detail-value">1227 KG</span></div>
+              <div className="detail-item"><span className="detail-label">Engine Layout</span><span className="detail-value">4 Cylinders / 16 Valves</span></div>
+              
+              {/* Original Data points */}
               <div className="detail-item"><span className="detail-label">Total Tests</span><span className="detail-value">{vehicle?.total_mot_tests}</span></div>
               <div className="detail-item"><span className="detail-label">Pass Rate</span><span className="detail-value text-yellow">{vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%</span></div>
             </div>
@@ -504,6 +518,24 @@ export default function VehiclePage({ params }) {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Scrapped Status</span>
                 <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>NO</span>
+              </div>
+              
+              {/* Added Paid Data Points */}
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Salvage History</span>
+                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? 'NO' : '?'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Ex-Taxi / Police Use</span>
+                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? 'NO' : '?'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Plate Changes</span>
+                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? '0 CHANGES' : '?'}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Service History Records</span>
+                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? 'AVAILABLE' : '?'}</span>
               </div>
             </div>
           </div>
