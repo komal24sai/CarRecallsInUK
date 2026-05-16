@@ -65,6 +65,7 @@ export default function Header() {
               <li><a href="/">Home</a></li>
               <li><a href="/recalls">Recalls Database</a></li>
               <li><a href="/dashboard">Dashboard</a></li>
+              <li><a href="/intelligence">Car Intelligence</a></li>
               <li><a href="/about">About</a></li>
               <li><a href="/" className="nav-cta">Check Vehicle</a></li>
             </ul>
