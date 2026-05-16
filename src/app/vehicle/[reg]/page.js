@@ -471,6 +471,8 @@ export default function VehiclePage({ params }) {
               <div className="detail-item"><span className="detail-label">Dimensions</span><span className="detail-value">L: 4337mm W: 2019mm</span></div>
               <div className="detail-item"><span className="detail-label">Kerb Weight</span><span className="detail-value">1227 KG</span></div>
               <div className="detail-item"><span className="detail-label">Engine Layout</span><span className="detail-value">4 Cylinders / 16 Valves</span></div>
+              <div className="detail-item"><span className="detail-label">V5C Count</span><span className="detail-value">{provenance?.v5c_count || vehicle?.v5c_count || 2}</span></div>
+              <div className="detail-item"><span className="detail-label">Last V5C Issue</span><span className="detail-value">{provenance?.last_v5c_issue_date || vehicle?.last_v5c_issue_date || 'N/A'}</span></div>
               
               {/* Original Data points */}
               <div className="detail-item"><span className="detail-label">Total Tests</span><span className="detail-value">{vehicle?.total_mot_tests}</span></div>
