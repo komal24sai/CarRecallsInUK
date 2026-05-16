@@ -3,7 +3,7 @@ import Footer from '@/components/layout/Footer';
 
 export const metadata = {
   title: 'About — CarRecalls UK',
-  description: 'Learn about our Bronze→Silver→Gold data engineering approach to UK vehicle safety intelligence.',
+  description: 'Learn about our approach to UK vehicle safety intelligence.',
 };
 
 export default function AboutPage() {
@@ -25,13 +25,7 @@ export default function AboutPage() {
             </p>
           </div>
 
-          <div className="info-card">
-            <h3>📐 Architecture</h3>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-              Built on a <strong>medallion data architecture</strong> (Bronze → Silver → Gold), inspired by modern data engineering practices.
-              Raw DVSA data is ingested, cleaned, enriched, and aggregated through three distinct layers before reaching the user.
-            </p>
-          </div>
+
 
           <div className="info-card vehicle-grid-full">
             <h3>📊 Data Sources</h3>
@@ -60,18 +54,7 @@ export default function AboutPage() {
             </div>
           </div>
 
-          <div className="info-card vehicle-grid-full">
-            <h3>👨‍💻 Built By</h3>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-              <strong>Venkata Komal Sai Mantha</strong> — Data Engineer &amp; Full-Stack Developer.
-              Part of the CarRecallsAI ecosystem, a distributed ETL platform unifying vehicle safety recall data from USA, UK &amp; EU government sources.
-            </p>
-            <p style={{ marginTop: '0.5rem' }}>
-              <a href="https://carrecallsai.com" target="_blank" rel="noopener">🌍 Visit Global Platform</a>
-              {' · '}
-              <a href="https://github.com/komal24sai/carrecallsAI" target="_blank" rel="noopener">📂 GitHub</a>
-            </p>
-          </div>
+
         </div>
       </div>
       <Footer />

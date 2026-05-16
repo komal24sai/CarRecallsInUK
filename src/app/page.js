@@ -42,8 +42,7 @@ export default function HomePage() {
               <span className="gradient-text">Intelligence Platform</span>
             </h1>
             <p>
-              Check MOT history, safety recalls, and AI-powered risk scores for any UK-registered vehicle. 
-              Built on a Bronze→Silver→Gold data engineering pipeline.
+              Check MOT history, safety recalls, and AI-powered risk scores for any UK-registered vehicle.
             </p>
             <div className="search-container">
               <form onSubmit={handleSearch}>
@@ -123,50 +122,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Pipeline */}
-        <section className="pipeline">
-          <div className="pipeline-inner">
-            <div className="section-header">
-              <h2>Data Engineering Pipeline</h2>
-              <p>Medallion architecture ensuring data quality at every stage</p>
-            </div>
-            <div className="pipeline-grid">
-              <div className="pipeline-card" data-layer="Layer 1">
-                <span className="pipeline-medal">🥉</span>
-                <h3>Bronze Layer</h3>
-                <p>Raw, unmodified DVSA data</p>
-                <ul className="pipeline-items">
-                  <li>📥 Raw MOT test records</li>
-                  <li>📥 Raw recall status data</li>
-                  <li>📥 Vehicle metadata</li>
-                  <li>📋 API audit trail</li>
-                </ul>
-              </div>
-              <div className="pipeline-card" data-layer="Layer 2">
-                <span className="pipeline-medal">🥈</span>
-                <h3>Silver Layer</h3>
-                <p>Cleaned &amp; enriched data</p>
-                <ul className="pipeline-items">
-                  <li>🔄 Make/model normalization</li>
-                  <li>🏷️ Defect classification</li>
-                  <li>📏 Mileage timeline</li>
-                  <li>🔍 Anomaly detection</li>
-                </ul>
-              </div>
-              <div className="pipeline-card" data-layer="Layer 3">
-                <span className="pipeline-medal">🥇</span>
-                <h3>Gold Layer</h3>
-                <p>Business intelligence</p>
-                <ul className="pipeline-items">
-                  <li>⭐ Safety score (0-100)</li>
-                  <li>📊 Risk aggregations</li>
-                  <li>📈 Trend analytics</li>
-                  <li>🏆 Model rankings</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </section>
+
       </main>
       <Footer />
     </>
