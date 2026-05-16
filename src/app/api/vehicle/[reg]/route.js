@@ -104,7 +104,7 @@ export async function GET(request, { params }) {
     
     // 3. Condition & MOT History (via Safety Score)
     // A score of 100 boosts value by ~15%, a score of 30 reduces it by ~20%
-    const conditionMultiplier = 1 + ((safetyScore.safetyScore - 70) / 200);
+    const conditionMultiplier = 1 + (((safetyScore?.safetyScore || 70) - 70) / 200);
     currentBaseValue = currentBaseValue * conditionMultiplier;
     
     // 4. Accidents / Write-offs
