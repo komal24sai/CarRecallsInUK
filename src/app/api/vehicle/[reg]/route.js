@@ -84,10 +84,10 @@ export async function GET(request, { params }) {
     const baseVehicleYear = vehicle.first_used_date ? new Date(vehicle.first_used_date).getFullYear() : 2015;
     const ageYears = Math.max(0, currentYear - baseVehicleYear);
     
-    const modelHashStr = `${vehicle.make_normalized || vehicle.make}-${vehicle.model_normalized || vehicle.model}`;
+    const baseModelHashStr = `${vehicle.make_normalized || vehicle.make}-${vehicle.model_normalized || vehicle.model}`;
     let baseHash = 0;
-    for (let i = 0; i < modelHashStr.length; i++) {
-      baseHash = ((baseHash << 5) - baseHash) + modelHashStr.charCodeAt(i);
+    for (let i = 0; i < baseModelHashStr.length; i++) {
+      baseHash = ((baseHash << 5) - baseHash) + baseModelHashStr.charCodeAt(i);
       baseHash = baseHash & baseHash;
     }
     
