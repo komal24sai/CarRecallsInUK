@@ -353,10 +353,6 @@ export default function VehiclePage({ params }) {
                 <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.co2_emissions || 'N/A'}</strong>
               </div>
               <div>
-                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Exported Status</span>
-                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.exported || 'N/A'}</strong>
-              </div>
-              <div>
                 <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Wheelplan</span>
                 <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.wheelplan || 'N/A'}</strong>
               </div>
