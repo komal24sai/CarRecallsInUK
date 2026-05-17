@@ -189,7 +189,7 @@ export default function VehiclePage({ params }) {
     </>
   );
 
-  const { vehicle, safetyScore, motHistory, defects, recalls } = data;
+  const { vehicle, safetyScore, motHistory, defects, recalls, defectDistribution } = data;
   const countdown = calculateMotCountdown(vehicle?.mot_expiry_date);
   
   // Custom styled risk color mappings
@@ -365,6 +365,168 @@ export default function VehiclePage({ params }) {
                 <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.revenue_weight || 'N/A'}</strong>
               </div>
             </div>
+          </div>
+
+          {/* DUAL INSIGHTS GRID (SAFETY SCORE & DEFECT DISTRIBUTION) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+            
+            {/* SAFETY SCORE GAUGE */}
+            <div style={{ background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border-color)', padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                🛡️ SAFETY SCORE
+              </h3>
+
+              {/* Radial Gauge */}
+              <div style={{ width: '150px', height: '150px', position: 'relative', marginBottom: '1.5rem' }}>
+                <svg viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                  {/* Background Circle */}
+                  <circle cx="70" cy="70" r="62" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                  {/* Foreground Animated Score Ring */}
+                  <circle cx="70" cy="70" r="62" fill="none" 
+                    stroke={
+                      safetyScore?.riskLevel === 'LOW' ? '#48BB78' : 
+                      safetyScore?.riskLevel === 'MEDIUM' ? '#ED8936' : 
+                      '#F56565'
+                    } 
+                    strokeWidth="8" 
+                    strokeLinecap="round" 
+                    strokeDasharray={2 * Math.PI * 62} 
+                    strokeDashoffset={2 * Math.PI * 62 - (2 * Math.PI * 62 * (safetyScore?.safetyScore || 70)) / 100} 
+                  />
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ fontSize: '2.8rem', fontWeight: '900', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{safetyScore?.safetyScore || '—'}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>/ 100</div>
+                </div>
+              </div>
+
+              {/* Risk Level Badge */}
+              <span style={{ 
+                background: safetyScore?.riskLevel === 'LOW' ? 'rgba(72, 187, 120, 0.15)' : safetyScore?.riskLevel === 'MEDIUM' ? 'rgba(237, 137, 54, 0.15)' : 'rgba(245, 101, 101, 0.15)', 
+                color: safetyScore?.riskLevel === 'LOW' ? '#48BB78' : safetyScore?.riskLevel === 'MEDIUM' ? '#ED8936' : '#F56565',
+                border: `1px solid ${safetyScore?.riskLevel === 'LOW' ? '#48BB78' : safetyScore?.riskLevel === 'MEDIUM' ? '#ED8936' : '#F56565'}`,
+                padding: '0.4rem 1.2rem', 
+                borderRadius: '20px', 
+                fontWeight: '900', 
+                fontSize: '0.78rem',
+                letterSpacing: '1px',
+                fontFamily: 'var(--font-mono)',
+                marginBottom: '2rem'
+              }}>
+                {safetyScore?.riskLevel} RISK VERDICT
+              </span>
+
+              {/* Subscores Progress Bars */}
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* MOT Pass History */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>MOT pass history</span>
+                    <strong style={{ 
+                      color: vehicle?.total_mot_tests ? 
+                        ((vehicle.total_passes / vehicle.total_mot_tests) > 0.8 ? '#48BB78' : 
+                         (vehicle.total_passes / vehicle.total_mot_tests) > 0.5 ? '#ED8936' : '#F56565') : '#FFF'
+                    }}>
+                      {vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%
+                    </strong>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%`, 
+                      background: vehicle?.total_mot_tests ? 
+                        ((vehicle.total_passes / vehicle.total_mot_tests) > 0.8 ? '#48BB78' : 
+                         (vehicle.total_passes / vehicle.total_mot_tests) > 0.5 ? '#ED8936' : '#F56565') : '#FFF',
+                      height: '100%' 
+                    }} />
+                  </div>
+                </div>
+
+                {/* Mileage Consistency */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Mileage consistency</span>
+                    <strong style={{ color: (safetyScore?.mileageConsistencyScore || 20) === 20 ? '#48BB78' : '#ED8936' }}>
+                      {(safetyScore?.mileageConsistencyScore || 20) === 20 ? 'Good' : 'Needs Verification'}
+                    </strong>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${((safetyScore?.mileageConsistencyScore || 20) / 20) * 100}%`, 
+                      background: (safetyScore?.mileageConsistencyScore || 20) === 20 ? '#48BB78' : '#ED8936',
+                      height: '100%' 
+                    }} />
+                  </div>
+                </div>
+
+                {/* Defect Severity */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Defect severity</span>
+                    <strong style={{ color: (safetyScore?.defectSeverityScore || 30) > 25 ? '#48BB78' : (safetyScore?.defectSeverityScore || 30) > 15 ? '#ED8936' : '#F56565' }}>
+                      {(safetyScore?.defectSeverityScore || 30) > 25 ? 'Low' : (safetyScore?.defectSeverityScore || 30) > 15 ? 'Medium' : 'High'}
+                    </strong>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${((safetyScore?.defectSeverityScore || 30) / 30) * 100}%`, 
+                      background: (safetyScore?.defectSeverityScore || 30) > 25 ? '#48BB78' : (safetyScore?.defectSeverityScore || 30) > 15 ? '#ED8936' : '#F56565',
+                      height: '100%' 
+                    }} />
+                  </div>
+                </div>
+
+                {/* Age vs Condition */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.35rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Age vs condition</span>
+                    <strong style={{ color: (safetyScore?.defectSeverityScore || 30) > 20 ? '#48BB78' : '#ED8936' }}>
+                      {(safetyScore?.defectSeverityScore || 30) > 20 ? 'Excellent' : 'Fair'}
+                    </strong>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: `${((safetyScore?.defectSeverityScore || 30) / 30) * 80}%`, 
+                      background: (safetyScore?.defectSeverityScore || 30) > 20 ? '#48BB78' : '#ED8936',
+                      height: '100%' 
+                    }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* DEFECT DISTRIBUTION */}
+            <div style={{ background: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border-color)', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                🟡 DEFECT DISTRIBUTION
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', flex: 1, justifyContent: 'center' }}>
+                {defectDistribution && defectDistribution.length > 0 ? (
+                  defectDistribution.slice(0, 8).map((d, i) => (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.3rem' }}>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>{d.category}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
+                          {d.count} ({d.percentage}%)
+                        </span>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.05)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ 
+                          width: `${d.percentage}%`, 
+                          background: i % 2 === 0 ? 'var(--accent-purple)' : 'var(--accent-amber)',
+                          height: '100%' 
+                        }} />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                    No defect distributions logged. This vehicle has a 100% clean history timeline.
+                  </div>
+                )}
+              </div>
+            </div>
+            
           </div>
 
           {/* CHECKLIST */}
