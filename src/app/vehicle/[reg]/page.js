@@ -189,7 +189,7 @@ export default function VehiclePage({ params }) {
     </>
   );
 
-  const { vehicle, safetyScore, motHistory, defects, recalls, defectDistribution } = data;
+  const { vehicle, safetyScore, motHistory, defects, recalls, defectDistribution, provenance } = data;
   const countdown = calculateMotCountdown(vehicle?.mot_expiry_date);
   
   // Custom styled risk color mappings
@@ -364,6 +364,199 @@ export default function VehiclePage({ params }) {
                 <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Revenue Weight</span>
                 <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.revenue_weight || 'N/A'}</strong>
               </div>
+            </div>
+          </div>
+
+          {/* PROVENANCE & HISTORY VERIFICATION GRID */}
+          <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2rem', marginBottom: '2.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', color: '#E8FF00', marginBottom: '1.5rem', borderBottom: '1px solid #262B38', paddingBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              🛡️ Provenance & History Verification
+            </h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+              {/* Column 1 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Police Stolen Check</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : (provenance?.is_stolen ? '#F56565' : '#48BB78')
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : (provenance?.is_stolen ? '🚨 STOLEN RECORD FOUND' : '✓ Passed (Clear)')}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Write-off / Salvage Check</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : (provenance?.write_off_category ? '#F56565' : '#48BB78')
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : (provenance?.write_off_category ? `🚨 ${provenance.write_off_category}` : '✓ Passed (Clear)')}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Outstanding Finance</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : (provenance?.has_outstanding_finance ? '#F56565' : '#48BB78')
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : (provenance?.has_outstanding_finance ? '🚨 Active Agreement Found' : '✓ Passed (Clear)')}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Total Keepers / Logbooks</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : '#FFF'
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : (provenance?.previous_owners || 'N/A')}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Ex-Taxi / Police / NHS use</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : '#48BB78'
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : '✓ No fleet record found'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Column 2 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Plate Change History</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : '#FFF'
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : 'No previous plate changes'}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Colour Changes</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : '#FFF'
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : 'No registered changes'}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Imported / Exported Status</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : '#48BB78'
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : '✓ UK Sourced'}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Scrapped Status</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : '#48BB78'
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : '✓ Live Registration'}
+                  </strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#A0AEC0' }}>Internet salvage history</span>
+                  <strong style={{ 
+                    fontSize: '0.85rem', 
+                    color: !isUnlocked ? '#ED8936' : '#48BB78'
+                  }}>
+                    {!isUnlocked ? '🔒 Click to unlock' : '✓ No listings found'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Click to see full report CTA */}
+            {!isUnlocked && (
+              <div style={{ textAlign: 'center', marginTop: '2rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '1.5rem' }}>
+                <a 
+                  href="#" 
+                  onClick={(e) => { e.preventDefault(); setIsModalOpen(true); }}
+                  style={{ color: '#E8FF00', fontWeight: 'bold', fontSize: '0.95rem', textDecoration: 'underline', letterSpacing: '0.5px' }}
+                >
+                  👉 CLICK TO RUN FULL PROVENANCE VERIFICATION & FORECAST CHECKS
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* REPORT CHECKLIST ICONS MATRIX */}
+          <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2rem', marginBottom: '2.5rem' }}>
+            <h4 style={{ textAlign: 'center', fontSize: '0.78rem', color: '#64748B', textTransform: 'uppercase', letterSpacing: '2px', margin: '0 0 2rem 0', fontFamily: 'var(--font-mono)' }}>
+              Interactive Report Verification Matrix
+            </h4>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '1.5rem' }}>
+              {[
+                { name: 'Stolen Report', premium: true, icon: '🚓' },
+                { name: 'Write-Off Check', premium: true, icon: '💥' },
+                { name: 'Plate Changes', premium: true, icon: '🔢' },
+                { name: 'VIN/Chassis Check', premium: true, icon: '🔍' },
+                { name: 'Salvage History', premium: true, icon: '🏗️' },
+                { name: 'Ex-Taxi Check', premium: true, icon: '🚖' },
+                { name: 'Valuation', premium: true, icon: '📈' },
+                { name: 'Service History', premium: true, icon: '🔧' },
+                { name: 'Internet history', premium: true, icon: '🌐' },
+                { name: 'Logbook Counts', premium: true, icon: '📄' },
+                { name: 'Previous Keepers', premium: true, icon: '👥' },
+                { name: 'Mileage Report', premium: false, icon: '⚡' },
+                { name: 'Colour Changes', premium: true, icon: '🎨' },
+                { name: 'Weight/Dimension', premium: false, icon: '⚖️' },
+                { name: 'Performance', premium: false, icon: '🚀' },
+                { name: 'Engine Data', premium: false, icon: '⚙️' },
+                { name: 'SMMT Details', premium: false, icon: '📋' },
+                { name: 'Fuel Economy', premium: false, icon: '⛽' },
+                { name: 'Running Costs', premium: true, icon: '💰' },
+                { name: 'Emissions', premium: false, icon: '💨' },
+                { name: 'Vehicle Details', premium: false, icon: '🚗' },
+                { name: 'MOT History', premium: false, icon: '📝' },
+                { name: 'Timeline', premium: false, icon: '📅' },
+              ].map((item, idx) => {
+                const isItemLocked = item.premium && !isUnlocked;
+                return (
+                  <div 
+                    key={idx} 
+                    onClick={() => { if (isItemLocked) setIsModalOpen(true); }}
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      textAlign: 'center', 
+                      cursor: isItemLocked ? 'pointer' : 'default',
+                      padding: '0.75rem 0.5rem',
+                      borderRadius: '4px',
+                      background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.03)',
+                      position: 'relative'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>{item.icon}</span>
+                    <span style={{ fontSize: '0.72rem', color: '#FFF', fontWeight: 'bold', fontFamily: 'var(--font-mono)', lineHeight: '1.3' }}>
+                      {item.name}
+                    </span>
+                    <span style={{ 
+                      position: 'absolute', 
+                      top: '4px', 
+                      right: '4px', 
+                      fontSize: '0.65rem', 
+                      background: isItemLocked ? '#ED8936' : '#48BB78',
+                      color: '#0D0F14',
+                      padding: '0 0.25rem',
+                      borderRadius: '3px',
+                      fontWeight: 'bold'
+                    }}>
+                      {isItemLocked ? '🔒' : '✓'}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -759,14 +952,7 @@ export default function VehiclePage({ params }) {
                     </div>
 
                     {/* Defect listings */}
-                    {!isUnlocked ? (
-                      <div style={{ marginTop: '0.5rem', background: '#0D0F14', padding: '0.6rem 1rem', borderRadius: '4px', border: '1px dashed #262B38', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ fontSize: '0.85rem' }}>🔒</span>
-                        <span style={{ color: '#64748B', fontSize: '0.8rem', fontStyle: 'italic' }}>
-                          {defects?.filter(d => d.test_number === test.test_number).length} advisories / defects hidden. <a href="#" onClick={(e) => { e.preventDefault(); setIsModalOpen(true); }} style={{ color: '#E8FF00', fontWeight: 'bold', textDecoration: 'underline' }}>Unlock Forensic Report</a> to view detailed failure items.
-                        </span>
-                      </div>
-                    ) : defects?.filter(d => d.test_number === test.test_number).length > 0 ? (
+                    {defects?.filter(d => d.test_number === test.test_number).length > 0 ? (
                       <ul style={{ paddingLeft: '1.25rem', color: '#A0AEC0', fontSize: '0.85rem', margin: '0.5rem 0 0 0', lineHeight: '1.6' }}>
                         {defects.filter(d => d.test_number === test.test_number).map((d, dIdx) => (
                           <li key={dIdx} style={{ marginBottom: '0.25rem' }}>
