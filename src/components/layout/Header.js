@@ -71,6 +71,62 @@ export default function Header() {
             </ul>
             
             <div className="header-controls">
+              {/* Compact Quick Plate Search */}
+              <div style={{
+                display: 'flex',
+                background: '#FFD300',
+                borderRadius: '4px',
+                border: '2px solid #000000',
+                padding: '1px',
+                width: '150px',
+                alignItems: 'stretch',
+                height: '32px',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+              }}>
+                <div style={{
+                  background: '#002F6C',
+                  color: '#FFFFFF',
+                  width: '18px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  fontSize: '0.45rem',
+                  fontWeight: '900',
+                  borderRadius: '2px 0 0 2px',
+                  padding: '0 2px',
+                  fontFamily: 'sans-serif'
+                }}>
+                  GB
+                </div>
+                <input
+                  type="text"
+                  placeholder="QUICK CHECK"
+                  maxLength={8}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim()) {
+                      const cleaned = e.target.value.replace(/\s/g, '').toUpperCase();
+                      if (cleaned.length >= 2 && cleaned.length <= 8) {
+                        window.location.href = `/vehicle/${cleaned}`;
+                      }
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: '#000000',
+                    fontSize: '0.75rem',
+                    fontWeight: '800',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    width: '80px',
+                    fontFamily: 'var(--font-mono), monospace'
+                  }}
+                />
+              </div>
+
               <button 
                 className={`hub-btn ${theme === 'dark' ? 'active' : ''}`}
                 onClick={toggleTheme} 
