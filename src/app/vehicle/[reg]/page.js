@@ -357,6 +357,14 @@ export default function VehiclePage({ params }) {
             <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Revenue Weight</span>
             <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.revenue_weight || 'N/A'}</strong>
           </div>
+          <div>
+            <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>V5C Document Ref</span>
+            <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.v5c_number || 'N/A'}</strong>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Last V5C Issued Date</span>
+            <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.v5c_issued_date || 'N/A'}</strong>
+          </div>
         </div>
       </div>
     );

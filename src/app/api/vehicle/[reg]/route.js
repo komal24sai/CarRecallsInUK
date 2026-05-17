@@ -203,7 +203,9 @@ export async function GET(request, { params }) {
       co2_emissions: runningCosts.co2Emissions ? `${runningCosts.co2Emissions} g/km` : 'N/A',
       exported: 'NO',
       wheelplan: '2 AXLE RIGID BODY',
-      revenue_weight: '1720 kg'
+      revenue_weight: '1720 kg',
+      v5c_number: vehicle.v5c_number || 'N/A',
+      v5c_issued_date: vehicle.v5c_issued_date ? (isNaN(Date.parse(vehicle.v5c_issued_date)) ? vehicle.v5c_issued_date : new Date(vehicle.v5c_issued_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })) : 'N/A'
     };
 
     return NextResponse.json({
