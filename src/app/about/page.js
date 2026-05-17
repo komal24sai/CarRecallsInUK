@@ -2,7 +2,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 
 export const metadata = {
-  title: 'About — isthiscarsafe',
+  title: 'About — IsThisCarSafe',
   description: 'Learn about our approach to UK vehicle safety intelligence.',
 };
 
@@ -12,7 +12,7 @@ export default function AboutPage() {
       <Header />
       <div className="vehicle-page">
         <div className="section-header" style={{ textAlign: 'left', marginBottom: '2rem' }}>
-          <h2>About isthiscarsafe</h2>
+          <h2>About IsThisCarSafe</h2>
           <p style={{ color: 'var(--text-secondary)' }}>UK vehicle safety intelligence powered by official DVSA data</p>
         </div>
 
@@ -20,7 +20,7 @@ export default function AboutPage() {
           <div className="info-card">
             <h3>🎯 Mission</h3>
             <p style={{ color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-              isthiscarsafe provides transparent, data-driven vehicle safety intelligence for every UK-registered vehicle.
+              IsThisCarSafe provides transparent, data-driven vehicle safety intelligence for every UK-registered vehicle.
               We believe every car buyer, seller, and owner deserves easy access to comprehensive MOT history and safety recall data.
             </p>
           </div>
@@ -46,7 +46,7 @@ export default function AboutPage() {
               </div>
               <div>
                 <div className="info-item-label">Global Platform</div>
-                <div className="info-item-value">isthiscarsafe AI</div>
+                <div className="info-item-value">IsThisCarSafe AI</div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                   NHTSA (USA), EU RAPEX integration at isthiscarsafe.co.uk
                 </p>

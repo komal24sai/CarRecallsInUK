@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import DodoPayments from 'dodopayments';
+import { createDealer, resetChecksUsed, updateDealerPlan } from '@/lib/db/dealers';
 
 const dodo = new DodoPayments({
   bearerToken: process.env.DODO_PAYMENTS_API_KEY,
@@ -18,7 +19,6 @@ const dodo = new DodoPayments({
 });
 
 // In-memory store for paid registrations (replace with DB in production)
-// This persists for the lifetime of the server process
 const paidRegistrations = new Set();
 const processedWebhookIds = new Set();
 
@@ -33,7 +33,6 @@ export function grantAccess(registration) {
 }
 
 export async function POST(request) {
-  // Webhook verification requires the raw body
   const rawBody = await request.text();
 
   const webhookId = request.headers.get('webhook-id');
@@ -47,15 +46,12 @@ export async function POST(request) {
   }
 
   const secret = process.env.DODO_PAYMENTS_WEBHOOK_SECRET;
-  console.log(`[Webhook Debug] Secret configured: ${!!secret}, Length: ${secret?.length}, Prefix: ${secret?.substring(0, 5)}`);
 
   const headersObj = {
     'webhook-id': webhookId ?? '',
     'webhook-signature': webhookSignature ?? '',
     'webhook-timestamp': webhookTimestamp ?? '',
   };
-
-  console.log(`[Webhook Debug] Headers:`, JSON.stringify(headersObj));
 
   let event;
   try {
@@ -64,7 +60,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error('[Webhook Error] Signature verification failed:', err.message);
-    console.error('[Webhook Error] Raw Body Length:', rawBody.length);
     return NextResponse.json({ error: 'Invalid signature', details: err.message }, { status: 401 });
   }
 
@@ -88,16 +83,48 @@ async function processEventAsync(event) {
       if (registration) {
         grantAccess(registration);
         console.log(`[Webhook] ✅ Access granted for registration: ${registration}`);
-        console.log(`[Webhook] Payment ID: ${payment.payment_id}, Customer: ${payment.customer?.email}`);
-      } else {
-        console.warn('[Webhook] payment.succeeded without registration metadata');
       }
       break;
     }
 
     case 'payment.failed': {
       const payment = event.data;
-      console.warn(`[Webhook] ❌ Payment failed for: ${payment.metadata?.registration} (${payment.payment_id})`);
+      console.warn(`[Webhook] ❌ Payment failed for: ${payment.metadata?.registration}`);
+      break;
+    }
+
+    case 'subscription.created': {
+      const sub = event.data;
+      const email = sub.customer?.email;
+      const businessName = sub.metadata?.business_name || 'Used Car Dealer';
+      const plan = sub.metadata?.plan || 'basic';
+      const subId = sub.subscription_id;
+
+      if (email) {
+        const result = createDealer(businessName, email, plan, subId);
+        console.log(`[Webhook] Dealer created via sub: ${email}`, result);
+      }
+      break;
+    }
+
+    case 'subscription.renewed': {
+      const sub = event.data;
+      const subId = sub.subscription_id;
+      if (subId) {
+        resetChecksUsed(subId);
+        console.log(`[Webhook] Checks reset for subscription: ${subId}`);
+      }
+      break;
+    }
+
+    case 'subscription.updated': {
+      const sub = event.data;
+      const subId = sub.subscription_id;
+      const newPlan = sub.metadata?.plan || 'basic';
+      if (subId) {
+        updateDealerPlan(subId, newPlan);
+        console.log(`[Webhook] Subscription plan updated to ${newPlan} for sub: ${subId}`);
+      }
       break;
     }
 

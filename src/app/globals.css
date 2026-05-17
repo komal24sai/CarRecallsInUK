@@ -1,9 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Syne:wght@700;800&display=swap');
 
 :root {
-  /* Default is now our unique Light Mode */
-  --bg-primary: #f4f7fb;
-  /* Soft, glare-reducing light blue/gray */
+  /* Default is now our unique Light Mode from the other branches */
+  --bg-primary: #f4f7fb; /* Soft, glare-reducing light blue/gray */
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
   --bg-card-hover: #f1f5f9;
@@ -12,58 +11,87 @@
   --bg-glass: rgba(255, 255, 255, 0.9);
   --gradient-card: linear-gradient(135deg, #ffffff, #f8fafc);
   --gradient-accent: linear-gradient(135deg, #1e40af, #6b21a8);
-
+  
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
-
-  /* Color-blind safe & accessible palette (WCAG AAA compliant contrast) */
+  
+  /* Color-blind safe & accessible palette */
   --accent-blue: #1d4ed8;
   --accent-purple: #7e22ce;
-  --accent-green: #15803d;
-  /* Distinct from red */
-  --accent-red: #b91c1c;
-  /* High contrast vermillion */
-  --accent-yellow: #b45309;
-  /* Deep amber for readability */
+  --accent-green: #15803d; /* Distinct from red */
+  --accent-red: #b91c1c;   /* High contrast vermillion */
+  --accent-yellow: #b45309; /* Deep amber for readability */
   --accent-amber: #d97706;
-
+  
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
   --shadow-glow: 0 0 15px rgba(29, 78, 216, 0.2);
-
+  
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --transition: all 0.2s ease;
-
+  
   --font-body: 'Inter', system-ui, sans-serif;
-  --font-heading: 'Outfit', sans-serif;
+  --font-heading: 'Syne', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f4f7fb;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --border-color: #cbd5e1;
+  --border-glass: #e2e8f0;
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --gradient-card: linear-gradient(135deg, #ffffff, #f8fafc);
+  --gradient-accent: linear-gradient(135deg, #1e40af, #6b21a8);
+  
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  
+  --accent-blue: #1d4ed8;
+  --accent-purple: #7e22ce;
+  --accent-green: #15803d;
+  --accent-red: #b91c1c;
+  --accent-yellow: #b45309;
+  --accent-amber: #d97706;
+  
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px rgba(29, 78, 216, 0.2);
 }
 
 [data-theme="dark"] {
-  --bg-primary: #12141a;
-  --bg-secondary: #1a1d24;
-  --bg-card: #1c1f26;
-  --bg-card-hover: #222631;
-  --border-color: #2e323e;
-  --border-glass: rgba(255, 255, 255, 0.1);
-  --bg-glass: rgba(18, 20, 26, 0.8);
-  --gradient-card: linear-gradient(135deg, #1c1f26, #16191f);
-  --gradient-accent: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  /* Dark terminal authoritative design system with safety yellow */
+  --bg-primary: #0D0F14;
+  --bg-secondary: #12151C;
+  --bg-card: #161922;
+  --bg-card-hover: #202532;
+  --border-color: #262B38;
+  --border-glass: rgba(232, 255, 0, 0.15);
+  --bg-glass: rgba(13, 15, 20, 0.95);
+  --gradient-card: linear-gradient(135deg, #161922, #0E1016);
+  --gradient-accent: linear-gradient(135deg, #E8FF00, #C2D600);
 
-  --text-primary: #ffffff;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0AEC0;
+  --text-muted: #64748B;
 
-  --accent-blue: #60a5fa;
-  --accent-purple: #8b5cf6;
-  --accent-green: #22c55e;
-  --accent-red: #ef4444;
-  --accent-yellow: #eab308;
-  --accent-amber: #fbbf24;
+  --accent-blue: #3182CE;
+  --accent-purple: #9F7AEA;
+  --accent-green: #48BB78;
+  --accent-red: #F56565;
+  --accent-yellow: #E8FF00; /* Sharp safety yellow */
+  --accent-amber: #ED8936;
 
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.3);
+  --shadow-glow: 0 0 15px rgba(232, 255, 0, 0.2);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 
 [data-contrast="high"] {

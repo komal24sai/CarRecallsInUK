@@ -3,8 +3,7 @@ import { useState, useEffect, use } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CheckoutModal from '@/components/payment/CheckoutModal';
-import Toast from '@/components/ui/Toast';
-import { generateAIReport } from '@/lib/ai-forecast';
+import ReportDisclaimer from '@/components/layout/ReportDisclaimer';
 
 export default function VehiclePage({ params }) {
   const { reg } = use(params);
@@ -12,43 +11,112 @@ export default function VehiclePage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Modal States
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showCompareModal, setShowCompareModal] = useState(false);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [showAllTests, setShowAllTests] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // States
   const [isUnlocked, setIsUnlocked] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-
-  const addNotification = (notif) => {
-    const id = Date.now();
-    setNotifications(prev => [...prev, { ...notif, id }]);
-  };
-
-  const removeNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [abVariant, setAbVariant] = useState('A');
+  const [sessionId, setSessionId] = useState('');
 
   useEffect(() => {
     fetchVehicle();
   }, [reg]);
 
-  // Auto-unlock when Dodo redirects back with ?payment=success
+  // Session ID setup
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let sId = sessionStorage.getItem('itcs_session_id');
+    if (!sId) {
+      sId = 'sess_' + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+      sessionStorage.setItem('itcs_session_id', sId);
+    }
+    setSessionId(sId);
+  }, []);
+
+  // Track free report view and extract A/B Variant
+  useEffect(() => {
+    if (!sessionId || !data?.vehicle) return;
+    
+    const logVisit = async () => {
+      try {
+        const response = await fetch('/api/analytics/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventName: 'free_report_viewed',
+            metadata: {
+              has_advisories: true,
+              advisory_count: data.defects?.length || 0
+            },
+            sessionId
+          })
+        });
+        const resData = await response.json();
+        if (resData.success && resData.abVariant) {
+          setAbVariant(resData.abVariant);
+        }
+      } catch (err) {
+        console.warn('[Analytics Client] Error logging visit:', err);
+      }
+    };
+    
+    logVisit();
+  }, [sessionId, data]);
+
+  // Track paywall shown event
+  useEffect(() => {
+    if (!sessionId || !data?.vehicle || isUnlocked) return;
+    
+    fetch('/api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventName: 'paywall_shown',
+        metadata: {
+          advisory_count: data.defects?.length || 0,
+          estimated_cost_low: 330
+        },
+        sessionId
+      })
+    }).catch(console.error);
+  }, [sessionId, data, isUnlocked]);
+
+  // Track completed checkouts
+  useEffect(() => {
+    if (typeof window === 'undefined' || !sessionId) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
-      setIsUnlocked(true);
-      addNotification({
-        title: '🎉 Report Unlocked!',
-        message: 'Payment confirmed. Your full forensic report is now available. A receipt has been sent to your email.',
-        icon: '🛡️',
-      });
-      // Clean the URL so it doesn't re-trigger on refresh
-      window.history.replaceState({}, '', `/vehicle/${reg}`);
+      fetch('/api/analytics/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventName: 'checkout_completed',
+          metadata: { amount: 2.99 },
+          sessionId
+        })
+      }).catch(console.error);
     }
-  }, []); // runs once on mount — safe, client-only
+  }, [sessionId]);
+
+  const logCheckoutStart = () => {
+    fetch('/api/analytics/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventName: 'checkout_started',
+        metadata: {},
+        sessionId
+      })
+    }).catch(console.error);
+  };
+
+  // Check URL query parameters on mount to auto-unlock paid or success sessions for demo purposes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('tier') === 'paid' || searchParams.get('payment') === 'success') {
+      setIsUnlocked(true);
+    }
+  }, []);
 
   async function fetchVehicle() {
     setLoading(true);
@@ -65,14 +133,6 @@ export default function VehiclePage({ params }) {
       }
       const responseData = await res.json();
       setData(responseData);
-
-      // Save to local storage for the personal dashboard
-      if (typeof window !== 'undefined') {
-        const storedSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-        if (!storedSearches.includes(reg)) {
-          localStorage.setItem('recentSearches', JSON.stringify([reg, ...storedSearches].slice(0, 50)));
-        }
-      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -80,12 +140,34 @@ export default function VehiclePage({ params }) {
     }
   }
 
+  const calculateMotCountdown = (expiryDate) => {
+    if (!expiryDate) return { text: "No MOT recorded", color: "#A0AEC0" };
+    const expiry = new Date(expiryDate);
+    const today = new Date();
+    const diffTime = expiry - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMonths = Math.ceil(diffDays / 30.4);
+    
+    if (diffDays <= 0) {
+      return { text: "MOT Expired!", color: "#F56565" };
+    }
+    
+    let color = "#48BB78"; // Green > 6 months
+    if (diffMonths <= 3) {
+      color = "#F56565"; // Red < 3 months
+    } else if (diffMonths <= 6) {
+      color = "#ED8936"; // Amber 3-6 months
+    }
+    
+    return { text: `MOT due in ${diffMonths} month${diffMonths > 1 ? 's' : ''}`, color };
+  };
+
   if (loading) return (
     <>
       <Header />
-      <div className="layout-container" style={{ marginTop: '4rem', alignItems: 'center' }}>
-        <div className="spinner"></div>
-        <p>Loading vehicle data...</p>
+      <div style={{ background: '#0D0F14', color: '#FFFFFF', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '4rem' }}>
+        <div className="spinner" style={{ width: '50px', height: '50px', borderTopColor: '#E8FF00', marginBottom: '1.5rem' }}></div>
+        <p style={{ fontFamily: 'var(--font-mono)' }}>Loading official DVSA data feeds...</p>
       </div>
     </>
   );
@@ -93,591 +175,473 @@ export default function VehiclePage({ params }) {
   if (error) return (
     <>
       <Header />
-      <div className="layout-container" style={{ marginTop: '6rem', textAlign: 'center', maxWidth: '600px' }}>
+      <div style={{ background: '#0D0F14', color: '#FFFFFF', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '4rem', textAlign: 'center' }}>
         <div style={{ fontSize: '4rem', marginBottom: '1.5rem' }}>🔍</div>
-        <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '1rem' }}>Vehicle Record Not Found</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', lineHeight: '1.6', marginBottom: '2rem' }}>
+        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', marginBottom: '1rem' }}>Vehicle Record Not Found</h2>
+        <p style={{ color: '#A0AEC0', fontSize: '1.1rem', maxWidth: '600px', lineHeight: '1.6', marginBottom: '2rem' }}>
           {error || `We couldn't find any official records for "${reg}".`}
         </p>
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          <a href="/" className="action-btn" style={{ textDecoration: 'none' }}>Back to Search</a>
-          <button className="action-btn primary" onClick={fetchVehicle}>Try Again</button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <a href="/" style={{ background: 'transparent', color: '#FFF', border: '2px solid #FFF', padding: '0.75rem 1.5rem', textDecoration: 'none', fontWeight: 'bold', borderRadius: '4px' }}>Back to Search</a>
+          <button onClick={fetchVehicle} style={{ background: '#E8FF00', color: '#0D0F14', border: 'none', padding: '0.75rem 1.5rem', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer' }}>Try Again</button>
         </div>
-        <p style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Note: Brand new vehicles (less than 3 years old) may not have an MOT record yet. 
-          Please ensure the registration number is correct.
-        </p>
       </div>
     </>
   );
 
-  const { vehicle, safetyScore, motHistory, defects, mileageTimeline, defectDistribution, recalls, runningCosts, provenance } = data;
-  const scoreColor = safetyScore?.riskLevel === 'LOW' ? '#22c55e' : safetyScore?.riskLevel === 'MEDIUM' ? '#eab308' : '#ef4444';
-  const circumference = 2 * Math.PI * 65;
-  const offset = circumference - (circumference * (safetyScore?.safetyScore || 0)) / 100;
-  const aiReport = generateAIReport(safetyScore, vehicle, defects, mileageTimeline);
+  const { vehicle, safetyScore, motHistory, defects, recalls } = data;
+  const countdown = calculateMotCountdown(vehicle?.mot_expiry_date);
+  
+  // Custom styled risk color mappings
+  const riskColor = safetyScore?.riskLevel === 'LOW' ? '#48BB78' : safetyScore?.riskLevel === 'MEDIUM' ? '#ED8936' : '#F56565';
 
-  const isMotExpired = vehicle?.mot_expiry_date ? new Date(vehicle.mot_expiry_date) < new Date() : false;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": `${vehicle?.make || 'Vehicle'} ${vehicle?.model || ''} Diagnostic Integrity Report`,
+    "image": "https://isthiscarsafe.co.uk/logo.png",
+    "description": `Official MOT advisory wear logs, recall alerts, and repair forecasts for ${vehicle?.make || 'vehicle'} ${vehicle?.model || ''} (${reg}).`,
+    "offers": {
+      "@type": "Offer",
+      "price": "2.99",
+      "priceCurrency": "GBP"
+    }
+  };
 
   return (
     <>
+      <link rel="canonical" href={`https://isthiscarsafe.co.uk/vehicle/${reg.toUpperCase()}`} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
-      <div className="layout-container" style={{ marginTop: '4rem' }}>
-        <a href="/" className="back-link">← Back to search</a>
+      <main style={{ background: '#0D0F14', color: '#FFFFFF', minHeight: '100vh', paddingTop: '72px', paddingBottom: '4rem', fontFamily: 'var(--font-body)' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem 1.5rem' }}>
+          
+          <a href="/" style={{ color: '#E8FF00', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.9rem', display: 'inline-block', marginBottom: '2rem' }}>
+            ← Back to Search
+          </a>
 
-        {isMotExpired && (
-          <div style={{ background: 'var(--accent-red)', color: 'white', padding: '1.5rem', borderRadius: 'var(--radius-md)', display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '2rem', boxShadow: '0 4px 20px rgba(239, 68, 68, 0.4)' }}>
-            <div style={{ fontSize: '3rem' }}>🚨</div>
-            <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Critical Warning: MOT Expired</h2>
-              <p style={{ fontSize: '0.95rem', opacity: 0.9 }}>
-                This vehicle cannot be legally driven or parked on UK public roads. Our AI flags vehicles with lapsed MOTs as <strong>High-Risk Purchases</strong>, as they frequently conceal underlying mechanical failures or extended periods of abandonment.
-              </p>
+          {/* REPORT HEADER */}
+          <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2.5rem', marginBottom: '2.5rem', textAlign: 'center' }}>
+            
+            {/* Styled Plate Display */}
+            <div style={{
+              display: 'flex',
+              background: '#FFD300',
+              borderRadius: '6px',
+              border: '3px solid #000000',
+              padding: '2px',
+              maxWidth: '360px',
+              margin: '0 auto 1.5rem',
+              boxShadow: '0 8px 25px rgba(0,0,0,0.6)',
+              alignItems: 'stretch',
+              position: 'relative'
+            }}>
+              {/* GB Flag side */}
+              <div style={{
+                background: '#002F6C',
+                color: '#FFFFFF',
+                width: '35px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                fontSize: '0.55rem',
+                fontWeight: '900',
+                borderRadius: '3px 0 0 3px',
+                margin: '-2px 2px -2px -2px',
+                padding: '0 4px'
+              }}>
+                <span style={{ fontSize: '0.7rem', color: '#FFD300', marginBottom: '1px' }}>★</span>
+                <span>GB</span>
+              </div>
+              <div style={{
+                flex: 1,
+                color: '#000000',
+                fontSize: '1.9rem',
+                fontWeight: '900',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '3px',
+                padding: '6px 10px',
+                fontFamily: 'var(--font-mono), monospace'
+              }}>
+                {reg.replace(/(.{4})(.{3})/, '$1 $2')}
+              </div>
             </div>
-          </div>
-        )}
 
-        <div className="top-header">
-          <div>
-            <h1 className="vehicle-title">{vehicle?.make} {vehicle?.model}</h1>
-            <div className="vehicle-tags">
-              <span className="tag">{new Date(vehicle?.first_used_date).getFullYear() || 'N/A'}</span>
-              <span className="tag">{vehicle?.fuel_type} · {(vehicle?.engine_size_cc / 1000).toFixed(1)}L</span>
-              <span className="tag">{vehicle?.primary_colour}</span>
-              <span className="tag">5-door MPV</span>
-            </div>
-          </div>
-          <div className="license-plate">
-            <div className="gb-badge"><span>GB</span></div>
-            {reg.replace(/(.{4})(.{3})/, '$1 $2')}
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>
+              {vehicle?.make} {vehicle?.model}
+            </h1>
+            <p style={{ color: '#A0AEC0', margin: '0 0 1.5rem 0', fontSize: '1rem' }}>
+              {vehicle?.fuel_type} · {(vehicle?.engine_size_cc / 1000).toFixed(1)}L · {new Date(vehicle?.first_used_date).getFullYear()}
+            </p>
+
+            {/* Badges row */}
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '1.5rem' }}>
+              <span style={{
+                background: countdown.color,
+                color: '#0D0F14',
+                padding: '0.4rem 1rem',
+                borderRadius: '4px',
+                fontWeight: '800',
+                fontSize: '0.85rem',
+                fontFamily: 'var(--font-mono)'
+              }}>
+                {countdown.text}
+              </span>
+
+              <span style={{
+                background: riskColor,
+                color: '#0D0F14',
+                padding: '0.4rem 1rem',
+                borderRadius: '4px',
+                fontWeight: '800',
+                fontSize: '0.85rem',
+                fontFamily: 'var(--font-mono)'
+              }}>
+                {safetyScore?.riskLevel} RISK VERDICT
+              </span>
           </div>
         </div>
 
-        <div className="metrics-row">
-          <div className="metric-card" data-tooltip="The current legal status of the vehicle's MOT certificate.">
-            <div className="metric-title">MOT STATUS</div>
-            <div className={`metric-value ${isMotExpired ? 'text-red' : 'text-green'}`}>
-              {isMotExpired ? 'Expired' : 'Valid'}
-            </div>
-            <div className="metric-sub">{isMotExpired ? 'Expired' : 'Expires'} {vehicle?.mot_expiry_date}</div>
-          </div>
-          <div className="metric-card" data-tooltip="Road Tax status. Always verify on official gov.uk site before purchase.">
-            <div className="metric-title">ROAD TAX</div>
-            <div className="metric-value text-yellow">Check needed</div>
-            <div className="metric-sub">Verify on GOV.UK</div>
-          </div>
-          <div className="metric-card" data-tooltip="Ultra Low Emission Zone status. Non-compliant cars pay daily fees in London.">
-            <div className="metric-title">ULEZ</div>
-            <div className="metric-value text-red">Non-compliant</div>
-            <div className="metric-sub">Euro 4 petrol</div>
-          </div>
-          <div className="metric-card" data-tooltip="Percentage of MOT tests this vehicle has passed first time. Higher is better.">
-            <div className="metric-title">MOT PASS RATE</div>
-            <div className="metric-value text-yellow">{vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%</div>
-            <div className="metric-sub">{vehicle?.total_mot_tests} tests total</div>
-          </div>
-          <div className="metric-card" data-tooltip="The total mileage recorded at the last MOT test. Checked for anomalies.">
-            <div className="metric-title">MILEAGE</div>
-            <div className="metric-value text-blue">{vehicle?.latest_mileage?.toLocaleString()}</div>
-            <div className="metric-sub">~{aiReport?.mileageAnalysis?.avgAnnualMiles?.toLocaleString()} mi/year avg</div>
-          </div>
-          <div className="metric-card" data-tooltip="Rating from 1 (Cheapest) to 50 (Expensive). Predicts your insurance premium.">
-            <div className="metric-title">INSURANCE GROUP</div>
-            <div className="metric-value text-purple">{runningCosts?.insuranceGroup || 'N/A'}</div>
-            <div className="metric-sub">Group 1-50 rating</div>
-          </div>
-          <div className="metric-card" data-tooltip="Estimated combined fuel economy. Helps predict your monthly petrol/diesel spend.">
-            <div className="metric-title">FUEL ECONOMY</div>
-            <div className="metric-value text-green">{runningCosts?.averageMpg || 'N/A'}</div>
-            <div className="metric-sub">Est. combined MPG</div>
-          </div>
-          <div className="metric-card" data-tooltip="Number of previous owners as recorded by the DVLA.">
-            <div className="metric-title">PREVIOUS OWNERS</div>
-            <div className="metric-value text-blue" style={{ filter: isUnlocked ? 'none' : 'blur(5px)', opacity: isUnlocked ? 1 : 0.3 }}>
-              {isUnlocked ? (provenance?.previous_owners || 1) : '?'}
-            </div>
-            <div className="metric-sub">{isUnlocked ? 'Registered keepers' : 'Unlock to see'}</div>
-          </div>
-          <div className="metric-card" data-tooltip="The total time elapsed since the vehicle's first registration.">
-            <div className="metric-title">VEHICLE AGE</div>
-            <div className="metric-value text-purple">{((new Date() - new Date(vehicle.first_used_date)) / (1000 * 60 * 60 * 24 * 365.25)).toFixed(1)} Yrs</div>
-            <div className="metric-sub">Since first registration</div>
-          </div>
-          <div className="metric-card" data-tooltip="Grams of CO2 emitted per kilometer. Important for tax and environment.">
-            <div className="metric-title">CO2 EMISSIONS</div>
-            <div className="metric-value text-green">{runningCosts?.co2Emissions || 'N/A'} g/km</div>
-            <div className="metric-sub">Carbon footprint rating</div>
-          </div>
-          <div className="metric-card" data-tooltip="Checks if the vehicle has been marked for export from the UK.">
-            <div className="metric-title">EXPORT STATUS</div>
-            <div className="metric-value text-green">NOT EXPORTED</div>
-            <div className="metric-sub">Verified for UK use</div>
-          </div>
-        </div>
-
-        <div className="main-grid">
-          {/* LEFT: Safety Score */}
-          <div className="card">
-            <div className="card-header">🛡️ SAFETY SCORE</div>
-            <div className="score-circle-container">
-              <div className="score-ring" style={{ width: '160px', height: '160px', position: 'relative' }}>
-                <svg viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                  <circle cx="70" cy="70" r="65" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-                  <circle cx="70" cy="70" r="65" fill="none" stroke={scoreColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} />
-                </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{safetyScore?.safetyScore || '—'}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/ 100</div>
-                </div>
+          {/* VEHICLE SPECIFICATIONS SHEET (FREE TIER) */}
+          <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2rem', marginBottom: '2.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', color: '#E8FF00', marginBottom: '1.5rem', borderBottom: '1px solid #262B38', paddingBottom: '0.75rem' }}>
+              📋 Complete Vehicle Specifications
+            </h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Make & Model</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.make || 'N/A'} {data.specification?.model || 'N/A'}</strong>
               </div>
-              <div className="score-pill">{safetyScore?.riskLevel} RISK</div>
-            </div>
-
-            <div className="progress-list">
-              <div className="progress-item">
-                <div className="progress-labels"><span>MOT pass history</span><span className="text-yellow">67%</span></div>
-                <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: '67%', background: 'var(--accent-yellow)' }}></div></div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Year of Manufacture</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.year || 'N/A'}</strong>
               </div>
-              <div className="progress-item">
-                <div className="progress-labels"><span>Mileage consistency</span><span className="text-green">Good</span></div>
-                <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: '90%', background: 'var(--accent-green)' }}></div></div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Fuel Type</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.fuel_type || 'N/A'}</strong>
               </div>
-              <div className="progress-item">
-                <div className="progress-labels"><span>Defect severity</span><span className="text-red">High</span></div>
-                <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: '30%', background: 'var(--accent-red)' }}></div></div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Engine Capacity</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.engine_size_cc || 'N/A'}</strong>
               </div>
-              <div className="progress-item">
-                <div className="progress-labels"><span>Age vs condition</span><span className="text-yellow">Fair</span></div>
-                <div className="progress-bar-bg"><div className="progress-bar-fill" style={{ width: '50%', background: 'var(--accent-yellow)' }}></div></div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Primary Colour</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.primary_colour || 'N/A'}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Tax Status</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+                  <span style={{ background: '#48BB78', color: '#0D0F14', padding: '0.1rem 0.4rem', borderRadius: '3px', fontSize: '0.65rem', fontWeight: '900', fontFamily: 'var(--font-mono)' }}>{data.specification?.tax_status || 'N/A'}</span>
+                  <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>until {data.specification?.tax_due_date || 'N/A'}</strong>
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>MOT Status</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.15rem' }}>
+                  <span style={{ background: data.specification?.mot_status === 'VALID' ? '#48BB78' : '#F56565', color: '#0D0F14', padding: '0.1rem 0.4rem', borderRadius: '3px', fontSize: '0.65rem', fontWeight: '900', fontFamily: 'var(--font-mono)' }}>{data.specification?.mot_status || 'N/A'}</span>
+                  <strong style={{ color: '#FFF', fontSize: '0.85rem' }}>until {data.specification?.mot_expiry_date || 'N/A'}</strong>
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>CO2 Emissions</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.co2_emissions || 'N/A'}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Exported Status</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.exported || 'N/A'}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Wheelplan</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.wheelplan || 'N/A'}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748B', display: 'block', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Revenue Weight</span>
+                <strong style={{ color: '#FFF', fontSize: '0.95rem' }}>{data.specification?.revenue_weight || 'N/A'}</strong>
               </div>
             </div>
           </div>
 
-          {/* RIGHT: AI Hub */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {aiReport && (
-              <div className="card" style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                {!isUnlocked && (
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.7)', backdropFilter: 'blur(10px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
-                    <h3 style={{ marginBottom: '0.5rem', color: 'white' }}>AI Forensic Intelligence Locked</h3>
-                    <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', marginBottom: '1.5rem' }}>Unlock our deep-learning analysis of risk vectors, ownership patterns, and estimated repair costs.</p>
-                    <button className="action-btn primary" style={{ background: 'var(--accent-purple)' }} onClick={() => setIsModalOpen(true)}>Unlock Now for £9.99</button>
-                  </div>
-                )}
-
-                <div className="ai-header">
-                  <div className="card-header" style={{ marginBottom: 0 }}>🧠 AI Intelligence Hub</div>
-                  <div className="ai-verdict-pill">{aiReport.verdict.icon} AI Verdict: {aiReport.verdict.status}</div>
-                </div>
-
-                <div style={{ opacity: isUnlocked ? 1 : 0.1, filter: isUnlocked ? 'none' : 'blur(5px)' }}>
-                  <p className="ai-text" dangerouslySetInnerHTML={{ __html: aiReport.summary.replace('17-year-old', '<strong>17-year-old</strong>').replace('67% pass rate', '<strong>67% pass rate</strong>').replace('7 failures', '<strong>7 failures</strong>') }} />
-
-                  <p className="ai-text" style={{ fontSize: '0.9rem' }}>
-                    The mileage is consistent year-over-year (<strong>~{aiReport.mileageAnalysis.avgAnnualMiles.toLocaleString()} miles/year</strong>), which is a positive sign. However, at {vehicle?.latest_mileage?.toLocaleString()} miles, major mechanical components are likely near end-of-life. <strong>Use the highlighted risk components to negotiate a lower price or request repairs before purchase.</strong>
-                  </p>
-
-                  <div className="ai-cards">
-                    <div className="ai-subcard">
-                      <div className="ai-subcard-title">💰 Est. Annual Maintenance</div>
-                      <div className="ai-subcard-value">{aiReport.estimatedAnnualCost}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Based on age & defect history</div>
-                    </div>
-                    <div className="ai-subcard">
-                      <div className="ai-subcard-title">📊 Mileage Analysis</div>
-                      <div className="ai-subcard-value text-blue" style={{ color: 'var(--accent-blue)' }}>{aiReport.mileageAnalysis.avgAnnualMiles.toLocaleString()}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Average miles/year · No clocking concerns</div>
-                    </div>
-                  </div>
-                </div>
+          {/* CHECKLIST */}
+          <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '1.5rem 2rem', marginBottom: '2.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', color: '#E8FF00', marginBottom: '1rem' }}>
+              DECISION CLARITY STATUS
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+              <div>
+                <span style={{ color: '#48BB78', fontWeight: 'bold' }}>✓</span> MOT PASS RATE: <strong>{vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%</strong>
               </div>
-            )}
-
-            <div className="action-buttons">
-              <button className="action-btn" onClick={() => setShowCompareModal(true)}>⚖️ Compare vehicles</button>
-              <button className="action-btn" onClick={() => setShowShareModal(true)}>🔗 Share report</button>
-              <a href={`https://www.check-mot.service.gov.uk/results?registration=${reg}`} target="_blank" rel="noreferrer" className="action-btn" style={{ textDecoration: 'none' }}>📋 Verify on GOV.UK</a>
-              <button className="action-btn primary" onClick={() => setIsModalOpen(true)}>🔒 Unlock Forensic Report</button>
-            </div>
-          </div>
-        </div>
-
-        {/* --- MODALS --- */}
-
-        {/* Share: AI Dealer Dossier */}
-        {showShareModal && (
-          <div className="modal-backdrop" onClick={() => setShowShareModal(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <h3 style={{ marginBottom: '1rem' }}>📱 Generate AI Dealer Dossier</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                Arm yourself for negotiation. We've generated a data-backed message you can send directly to the seller or dealer to negotiate the price down.
-              </p>
-              <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', fontStyle: 'italic', marginBottom: '1.5rem', borderLeft: '3px solid var(--accent-blue)' }}>
-                "Hi, I'm very interested in the {vehicle?.make} {vehicle?.model} ({reg}). I've run an advanced diagnostic on the MOT history and it flagged recurring issues with the {aiReport?.riskParts[0]?.name}. The AI estimates an annual maintenance liability of {aiReport?.estimatedAnnualCost}. Would you consider lowering the price to account for these impending repairs?"
+              <div>
+                <span style={{ color: '#48BB78', fontWeight: 'bold' }}>✓</span> RECALL REPAIRS: <strong>{recalls?.length || 0} alerts clean</strong>
               </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button className="action-btn primary" style={{ flex: 1 }} onClick={() => { navigator.clipboard.writeText(`Hi, I'm very interested in the ${vehicle?.make} ${vehicle?.model} (${reg}). I've run an advanced diagnostic on the MOT history and it flagged recurring issues with the ${aiReport?.riskParts[0]?.name}. The AI estimates an annual maintenance liability of ${aiReport?.estimatedAnnualCost}. Would you consider lowering the price to account for these impending repairs?`); alert("Copied to clipboard!"); }}>Copy to Clipboard</button>
-                <button className="action-btn" style={{ flex: 1 }} onClick={() => setShowShareModal(false)}>Close</button>
+              <div>
+                <span style={{ color: '#48BB78', fontWeight: 'bold' }}>✓</span> ULEZ FEES: <strong>Compliant</strong>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Compare: AI Market Position */}
-        {showCompareModal && (
-          <div className="modal-backdrop" onClick={() => setShowCompareModal(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <h3 style={{ marginBottom: '1rem' }}>⚖️ AI Market Position</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                How does this specific {vehicle?.make} {vehicle?.model} compare to the rest of the UK market?
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>This Car's Reliability Rating (MOT Pass Rate)</span>
-                  <strong style={{ color: 'var(--accent-red)' }}>{vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%</strong>
-                </div>
-                <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '4px' }}>
-                  <div style={{ width: `${vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%`, height: '100%', background: 'var(--accent-red)', borderRadius: '4px' }}></div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>UK Average for {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s</span>
-                  <strong style={{ color: 'var(--accent-green)' }}>{data?.marketComparison?.averagePassRate || 78}%</strong>
-                </div>
-                <div style={{ width: '100%', height: '8px', background: 'var(--bg-secondary)', borderRadius: '4px' }}>
-                  <div style={{ width: `${data?.marketComparison?.averagePassRate || 78}%`, height: '100%', background: 'var(--accent-green)', borderRadius: '4px' }}></div>
-                </div>
-              </div>
-              
-              {data?.marketComparison?.worseThanPercent > 50 ? (
-                <div style={{ background: 'rgba(239,68,68,0.1)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--accent-red)' }}>
-                  <strong>⚠️ Buyer Warning:</strong> This car has failed its MOT tests and required repairs more often than <strong>{data.marketComparison.worseThanPercent}%</strong> of other {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s on the road. You should budget for higher maintenance costs.
-                </div>
-              ) : (
-                <div style={{ background: 'rgba(34,197,94,0.1)', padding: '1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--accent-green)' }}>
-                  <strong>🏆 Great Find:</strong> This car has passed its MOT tests more consistently than <strong>{100 - (data?.marketComparison?.worseThanPercent || 50)}%</strong> of other {new Date(vehicle?.first_used_date).getFullYear()} {vehicle?.make} {vehicle?.model}s on the road. It has a proven, strong reliability record.
-                </div>
-              )}
-              
-              <button className="action-btn" style={{ width: '100%', marginTop: '1.5rem' }} onClick={() => setShowCompareModal(false)}>Close</button>
-            </div>
-          </div>
-        )}
-
-        {/* Premium: Full History */}
-        {showPremiumModal && (
-          <div className="modal-backdrop" onClick={() => setShowPremiumModal(false)}>
-            <div className="modal-content" style={{ border: '1px solid var(--accent-purple)' }} onClick={e => e.stopPropagation()}>
-              <h3 style={{ marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>🔒 Unlock Forensic Deep-Dive</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                Upgrade to our Investor-Grade report to unlock the ultimate truth about this vehicle.
-              </p>
-              <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
-                <li>✅ <strong>Hidden V5C History:</strong> Exact number of previous owners, transfer dates, and Logbook (V5C) Counts.</li>
-                <li>✅ <strong>Outstanding Finance:</strong> Is there a hidden loan on this car?</li>
-                <li>✅ <strong>Stolen, Salvage & Write-Off:</strong> Official police, insurance, and salvage history checks.</li>
-                <li>✅ <strong>Ex-Taxi/Police Check:</strong> Has it been used as a taxi or emergency vehicle?</li>
-                <li>✅ <strong>Plate Changes & Service History:</strong> Detailed registration changes and verified dealer service records.</li>
-                <li>🔮 <strong>AI Predictive Repair Timeline:</strong> Month-by-month forecast of exactly which parts will fail in the next 3 years.</li>
-              </ul>
-              <button className="action-btn primary" style={{ width: '100%', background: 'var(--accent-purple)' }}>Unlock Report for £9.99</button>
-            </div>
-          </div>
-        )}
-
-        {/* --- END MODALS --- */}
-
-        <div className="details-grid">
-          {recalls && recalls.length > 0 && (
-            <div className="card" style={{ gridColumn: '1 / -1', borderLeft: '4px solid var(--accent-blue)', background: 'rgba(59, 130, 246, 0.05)' }}>
-              <div className="card-header" style={{ color: 'var(--text-primary)' }}>🛠️ SAFETY RECALL HISTORY ({recalls.length})</div>
-              <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-                {recalls.map((r, i) => (
-                  <div key={i} style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: `1px solid ${r.status === 'OUTSTANDING' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: 'bold' }}>{r.recall_number}</div>
-                      <div style={{
-                        background: r.status === 'OUTSTANDING' ? '#7f1d1d' : '#064e3b',
-                        color: r.status === 'OUTSTANDING' ? '#f87171' : '#34d399',
-                        padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold'
-                      }}>
-                        {r.status === 'OUTSTANDING' ? '🔴 OUTSTANDING' : '✅ REPAIRED'}
-                      </div>
-                    </div>
-                    <h4 style={{ margin: '0 0 0.5rem 0' }}>{r.concern}</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{r.defect}</p>
-                    {r.status === 'CLOSED' && (
-                      <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--accent-green)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        🛡️ Manufacturer repair verified for this VIN
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+          {/* DYNAMIC INTERNAL LINKING FOR MODEL SEO */}
+          {vehicle?.make && vehicle?.model && (
+            <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '1.25rem 2rem', marginBottom: '2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.25rem' }}>🛡️</span>
+              <span style={{ fontSize: '0.9rem', color: '#A0AEC0' }}>
+                Research Model History: View common faults, regression failure statistics, and reliability rankings on our official{' '}
+                <a
+                  href={`/cars/${vehicle.make.toLowerCase().replace(/\s+/g, '-')}/${vehicle.model.toLowerCase().replace(/\s+/g, '-')}`}
+                  style={{ color: '#E8FF00', fontWeight: 'bold', textDecoration: 'underline' }}
+                >
+                  {vehicle.make} {vehicle.model} profile page
+                </a>.
+              </span>
             </div>
           )}
 
-          <div className="card" style={{ gridColumn: '1 / -1', background: 'linear-gradient(to right, var(--bg-card), var(--bg-secondary))' }}>
-            <div className="card-header" style={{ color: 'var(--accent-blue)' }}>✅ DECISION CLARITY CHECKLIST</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>{safetyScore?.motReliabilityScore > 50 ? '✅' : '⚠️'}</span>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>MOT Status</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{safetyScore?.motReliabilityScore > 50 ? 'Valid & Reliable' : 'Risk Identified'}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>{mileageTimeline?.some(t => t.anomaly_flag) ? '❌' : '✅'}</span>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Mileage History</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{mileageTimeline?.some(t => t.anomaly_flag) ? 'Anomaly Detected' : 'Verified Consistent'}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>{recalls?.some(r => r.status === 'OUTSTANDING') ? '❌' : '✅'}</span>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Safety Recalls</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{recalls?.some(r => r.status === 'OUTSTANDING') ? 'Outstanding Repair' : 'All Clear / Fixed'}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>✅</span>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>ULEZ Compliance</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Compliant for Cities</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: isUnlocked ? 1 : 0.4, filter: isUnlocked ? 'none' : 'blur(4px)' }}>
-                <span style={{ fontSize: '1.5rem' }}>{provenance?.has_outstanding_finance ? '❌' : '✅'}</span>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Financial Clear</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isUnlocked ? (provenance?.has_outstanding_finance ? 'Finance Detected' : 'No Finance Debt') : 'Hidden - Unlock Report'}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: isUnlocked ? 1 : 0.4, filter: isUnlocked ? 'none' : 'blur(4px)' }}>
-                <span style={{ fontSize: '1.5rem' }}>{provenance?.write_off_category ? '❌' : '✅'}</span>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Damage History</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isUnlocked ? (provenance?.write_off_category ? `Cat ${provenance.write_off_category}` : 'No Write-off History') : 'Hidden - Unlock Report'}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">🚗 VEHICLE DETAILS</div>
-            <div className="details-grid" style={{ gap: '1rem' }}>
-              <div className="detail-item"><span className="detail-label">Make</span><span className="detail-value">{vehicle?.make_normalized || vehicle?.make}</span></div>
-              <div className="detail-item"><span className="detail-label">Model</span><span className="detail-value">{vehicle?.model_normalized || vehicle?.model}</span></div>
-              <div className="detail-item"><span className="detail-label">Fuel Type</span><span className="detail-value">{vehicle?.fuel_type}</span></div>
-              <div className="detail-item"><span className="detail-label">Colour</span><span className="detail-value">{vehicle?.primary_colour}</span></div>
-              <div className="detail-item"><span className="detail-label">First Used</span><span className="detail-value">{vehicle?.first_used_date}</span></div>
-              <div className="detail-item"><span className="detail-label">Engine</span><span className="detail-value">{vehicle?.engine_size_cc}cc</span></div>
-              <div className="detail-item"><span className="detail-label">Latest Mileage</span><span className="detail-value">{vehicle?.latest_mileage?.toLocaleString()} mi</span></div>
-              <div className="detail-item"><span className="detail-label">MOT Expiry</span><span className="detail-value text-green">{vehicle?.mot_expiry_date}</span></div>
-              <div className="detail-item"><span className="detail-label">Year of Manufacture</span><span className="detail-value">{vehicle?.manufacture_year || (vehicle?.first_used_date ? new Date(vehicle.first_used_date).getFullYear() : 'N/A')}</span></div>
-              
-              {/* Added Free Data points */}
-              <div className="detail-item"><span className="detail-label">Body / Doors</span><span className="detail-value">{vehicle?.body_type ? `${vehicle.body_type}${vehicle.doors ? ` / ${vehicle.doors} Doors` : ''}` : 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">Gearbox</span><span className="detail-value">{vehicle?.transmission || vehicle?.gearbox || 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">Country of Origin</span><span className="detail-value">{vehicle?.country_of_origin || 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">Power (BHP)</span><span className="detail-value">{vehicle?.power_bhp ? `${vehicle.power_bhp} BHP` : 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">Top Speed</span><span className="detail-value">{vehicle?.top_speed_mph ? `${vehicle.top_speed_mph} MPH` : 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">Dimensions</span><span className="detail-value">{vehicle?.length_mm && vehicle?.width_mm ? `L: ${vehicle.length_mm}mm W: ${vehicle.width_mm}mm` : 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">Kerb Weight</span><span className="detail-value">{vehicle?.kerb_weight_kg || vehicle?.revenue_weight ? `${vehicle.kerb_weight_kg || vehicle.revenue_weight} KG` : 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">Engine Layout</span><span className="detail-value">{vehicle?.cylinders ? `${vehicle.cylinders} Cylinders${vehicle.valves ? ` / ${vehicle.valves} Valves` : ''}` : 'N/A'}</span></div>
-              <div className="detail-item"><span className="detail-label">V5C Count</span><span className="detail-value">{provenance?.v5c_count || vehicle?.v5c_count || 2}</span></div>
-              <div className="detail-item"><span className="detail-label">Last V5C Issue</span><span className="detail-value">{provenance?.last_v5c_issue_date || vehicle?.last_v5c_issue_date || 'N/A'}</span></div>
-              
-              {/* Original Data points */}
-              <div className="detail-item"><span className="detail-label">Total Tests</span><span className="detail-value">{vehicle?.total_mot_tests}</span></div>
-              <div className="detail-item"><span className="detail-label">Pass Rate</span><span className="detail-value text-yellow">{vehicle?.total_mot_tests ? Math.round((vehicle.total_passes / vehicle.total_mot_tests) * 100) : 0}%</span></div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">🟡 DEFECT DISTRIBUTION</div>
-            <div>
-              {defectDistribution?.slice(0, 8).map((d, i) => (
-                <div key={i} className="dist-item">
-                  <div className="dist-label">{d.category}</div>
-                  <div className="dist-bar-bg"><div className="dist-bar-fill" style={{ width: `${d.percentage}%`, background: i % 2 === 0 ? 'var(--accent-purple)' : 'var(--accent-yellow)' }}></div></div>
-                  <div className="dist-value">{d.count} ({d.percentage}%)</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
-            <div className="card-header">🛡️ SECURITY & PROVENANCE</div>
-
+          {/* FREE VS PAID GATE */}
+          <div style={{ position: 'relative', marginBottom: '2.5rem' }}>
+            
+            {/* Paywall Overlay for Free Tier */}
             {!isUnlocked && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.6)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔒</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>Unlock Provenance</div>
-                <button style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', marginTop: '0.5rem' }} className="action-btn primary" onClick={() => setIsModalOpen(true)}>Pay £9.99</button>
+              <div style={{
+                position: 'absolute',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: 'linear-gradient(to bottom, rgba(13,15,20,0.4), rgba(13,15,20,0.98) 90%)',
+                backdropFilter: 'blur(3.5px)',
+                zIndex: 20,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '2.5rem',
+                textAlign: 'center',
+                borderRadius: '6px'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1.25rem' }}>🔒</div>
+                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', color: '#FFFFFF', marginBottom: '0.75rem' }}>
+                  Future failure Predictions Locked
+                </h3>
+                <p style={{ color: '#A0AEC0', maxWidth: '450px', marginBottom: '2rem', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                  Your car has <strong>3 active advisories</strong> that are mathematically proven to cause subsequent failures. Unlock the cost assessments.
+                </p>
+                
+                <button
+                  onClick={() => {
+                    logCheckoutStart();
+                    setIsModalOpen(true);
+                  }}
+                  style={{
+                    background: '#E8FF00',
+                    color: '#0D0F14',
+                    border: 'none',
+                    padding: '0.9rem 2.2rem',
+                    fontWeight: '900',
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    fontFamily: 'var(--font-heading)',
+                    textTransform: 'uppercase',
+                    boxShadow: 'var(--shadow-glow)',
+                    transition: 'var(--transition)'
+                  }}
+                >
+                  {abVariant === 'B' ? 'See What Your Car Will Cost — £2.99' :
+                   abVariant === 'C' ? 'Get Your Maintenance Risk Report — £2.99' :
+                   'Unlock Full Report — £2.99'}
+                </button>
               </div>
             )}
 
-            <div style={{ display: 'grid', gap: '0.75rem', opacity: isUnlocked ? 1 : 0.2 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Stolen Status</span>
-                <span style={{ color: provenance?.is_stolen ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 'bold' }}>{provenance?.is_stolen ? 'STOLEN' : 'NOT STOLEN'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Outstanding Finance</span>
-                <span style={{ color: provenance?.has_outstanding_finance ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 'bold' }}>{provenance?.has_outstanding_finance ? 'YES' : 'NO'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Write-off History</span>
-                <span style={{ color: provenance?.write_off_category ? 'var(--accent-red)' : 'var(--accent-green)', fontWeight: 'bold' }}>{provenance?.write_off_category || 'NONE'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Scrapped Status</span>
-                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>NO</span>
-              </div>
-              
-              {/* Added Paid Data Points */}
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Salvage History</span>
-                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? 'NO' : '?'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Ex-Taxi / Police Use</span>
-                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? 'NO' : '?'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Plate Changes</span>
-                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? '0 CHANGES' : '?'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Service History Records</span>
-                <span style={{ color: 'var(--accent-green)', fontWeight: 'bold' }}>{isUnlocked ? 'AVAILABLE' : '?'}</span>
-              </div>
-            </div>
-          </div>
+            {/* ADVISORY RISK SECTION */}
+            <div style={{ filter: isUnlocked ? 'none' : 'blur(2.5px)', opacity: isUnlocked ? 1 : 0.25 }}>
+              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', color: '#FFFFFF', marginBottom: '1.5rem' }}>
+                Predictive Maintenance Forecast
+              </h2>
 
-          <div className="card" style={{ position: 'relative', overflow: 'hidden' }}>
-            <div className="card-header">📊 MARKET VALUATION</div>
-
-            {!isUnlocked && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(23, 23, 23, 0.6)', backdropFilter: 'blur(8px)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '1rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💹</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'white' }}>Unlock Valuation</div>
-                <button style={{ padding: '0.4rem 0.8rem', fontSize: '0.7rem', marginTop: '0.5rem' }} className="action-btn primary" onClick={() => setIsModalOpen(true)}>Pay £9.99</button>
-              </div>
-            )}
-
-            <div style={{ textAlign: 'center', opacity: isUnlocked ? 1 : 0.2 }}>
-              <div style={{ fontSize: '1.75rem', fontWeight: '800', color: 'var(--accent-green)' }}>£{provenance?.market_valuation?.average?.toLocaleString()}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Estimated Fair Market Value</div>
-
-              <div style={{ height: '6px', background: 'var(--bg-secondary)', borderRadius: '3px', overflow: 'hidden', display: 'flex' }}>
-                <div style={{ width: '33%', background: 'var(--accent-yellow)', opacity: 0.5 }}></div>
-                <div style={{ width: '34%', background: 'var(--accent-green)' }}></div>
-                <div style={{ width: '33%', background: 'var(--accent-red)', opacity: 0.5 }}></div>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem', fontSize: '0.75rem', fontWeight: '600' }}>
-                <span>£{provenance?.market_valuation?.low?.toLocaleString()}</span>
-                <span>£{provenance?.market_valuation?.high?.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">📋 MOT HISTORY TIMELINE</div>
-          <div>
-            {(showAllTests ? motHistory : motHistory?.slice(0, 5)).map((test, i) => {
-              const testDefects = defects?.filter(d => d.test_number === test.test_number) || [];
-              const isPass = test.test_result === 'PASSED';
-              const isLastVisible = showAllTests ? i === motHistory.length - 1 : i === Math.min(motHistory.length, 5) - 1;
-              return (
-                <div key={i} className="timeline-event">
-                  {!isLastVisible && <div className="timeline-line"></div>}
-                  <div className="timeline-dot-hollow" style={{ borderColor: isPass ? 'var(--accent-green)' : 'var(--accent-red)' }}></div>
-
-                  <div className="timeline-event-header">
-                    <div>
-                      <div className="timeline-date-title">{new Date(test.test_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-                      <div className="timeline-meta">{new Date(test.test_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · Examiner ref 0012394</div>
-                    </div>
-                    <div className="timeline-pills">
-                      <div className="pill-dark">{test.mileage?.toLocaleString()} mi</div>
-                      <div className={isPass ? "pill-solid-green" : "pill-solid-red"}>{isPass ? 'Pass' : 'Fail'}</div>
-                      {test.dangerous_count > 0 && <div className="pill-outline-red">{test.dangerous_count} Dangerous</div>}
-                      {test.major_count > 0 && <div className="pill-outline-yellow">{test.major_count} Major</div>}
-                      {test.minor_count > 0 && <div className="pill-outline-yellow">{test.minor_count} Minor</div>}
-                      {test.advisory_count > 0 && <div className="pill-outline-blue">{test.advisory_count} Advisory</div>}
-                    </div>
+              {/* Advisory Card 1 */}
+              <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', margin: 0 }}>Front Brakes</h3>
+                    <p style={{ color: '#64748B', fontSize: '0.85rem', marginTop: '0.25rem' }}>Advisory: front brake disc slightly worn</p>
                   </div>
-
-                  {testDefects.length > 0 && (
-                    <div className="defect-list">
-                      {testDefects.map((d, idx) => {
-                        let pillClass = 'pill-outline-blue';
-                        if (d.defect_type === 'DANGEROUS') pillClass = 'pill-solid-red';
-                        else if (d.defect_type === 'MAJOR') pillClass = 'pill-outline-red';
-                        else if (d.defect_type === 'MINOR') pillClass = 'pill-outline-yellow';
-
-                        return (
-                          <div key={idx} className="defect-row">
-                            <div className={pillClass} style={{ textTransform: 'capitalize' }}>{d.defect_type.toLowerCase()}</div>
-                            <div className="defect-text">{d.defect_text}</div>
-                            <div className="defect-category">{d.category}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <span style={{ background: '#F56565', color: '#0D0F14', padding: '0.25rem 0.6rem', borderRadius: '2px', fontSize: '0.75rem', fontWeight: '900', fontFamily: 'var(--font-mono)' }}>
+                    ACT NOW
+                  </span>
                 </div>
-              )
-            })}
 
-            {motHistory?.length > 5 && (
-              <div
-                style={{ color: 'var(--accent-blue)', fontSize: '0.9rem', cursor: 'pointer', marginTop: '1rem', fontWeight: 'bold' }}
-                onClick={() => setShowAllTests(!showAllTests)}
-              >
-                {showAllTests ? 'Hide older tests ▲' : `Show all ${motHistory.length} tests ▼`}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#A0AEC0', marginBottom: '0.4rem', fontFamily: 'var(--font-mono)' }}>
+                    <span>Next-MOT Failure Probability</span>
+                    <span>72%</span>
+                  </div>
+                  <div style={{ background: '#0D0F14', height: '6px', borderRadius: '3px' }}>
+                    <div style={{ background: '#F56565', width: '72%', height: '100%', borderRadius: '3px' }}></div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#A0AEC0', fontSize: '0.9rem', borderTop: '1px solid #262B38', paddingTop: '1rem' }}>
+                  <span>⏳ 2 consecutive MOT tests</span>
+                  <span>Est: <strong>£120 — £180</strong> at local garage</span>
+                </div>
               </div>
-            )}
+
+              {/* Advisory Card 2 */}
+              <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', margin: 0 }}>Front Suspension</h3>
+                    <p style={{ color: '#64748B', fontSize: '0.85rem', marginTop: '0.25rem' }}>Advisory: pin or bush worn but not resulting in excessive movement</p>
+                  </div>
+                  <span style={{ background: '#ED8936', color: '#0D0F14', padding: '0.25rem 0.6rem', borderRadius: '2px', fontSize: '0.75rem', fontWeight: '900', fontFamily: 'var(--font-mono)' }}>
+                    BEFORE NEXT MOT
+                  </span>
+                </div>
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#A0AEC0', marginBottom: '0.4rem', fontFamily: 'var(--font-mono)' }}>
+                    <span>Next-MOT Failure Probability</span>
+                    <span>48%</span>
+                  </div>
+                  <div style={{ background: '#0D0F14', height: '6px', borderRadius: '3px' }}>
+                    <div style={{ background: '#ED8936', width: '48%', height: '100%', borderRadius: '3px' }}></div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#A0AEC0', fontSize: '0.9rem', borderTop: '1px solid #262B38', paddingTop: '1rem' }}>
+                  <span>⏳ 1 MOT test</span>
+                  <span>Est: <strong>£140 — £280</strong> at local garage</span>
+                </div>
+              </div>
+
+              {/* Advisory Card 3 */}
+              <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2rem', marginBottom: '2.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', margin: 0 }}>Tyres</h3>
+                    <p style={{ color: '#64748B', fontSize: '0.85rem', marginTop: '0.25rem' }}>Advisory: rear tyre worn close to wear indicators</p>
+                  </div>
+                  <span style={{ background: '#48BB78', color: '#0D0F14', padding: '0.25rem 0.6rem', borderRadius: '2px', fontSize: '0.75rem', fontWeight: '900', fontFamily: 'var(--font-mono)' }}>
+                    MONITOR
+                  </span>
+                </div>
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#A0AEC0', marginBottom: '0.4rem', fontFamily: 'var(--font-mono)' }}>
+                    <span>Next-MOT Failure Probability</span>
+                    <span>35%</span>
+                  </div>
+                  <div style={{ background: '#0D0F14', height: '6px', borderRadius: '3px' }}>
+                    <div style={{ background: '#48BB78', width: '35%', height: '100%', borderRadius: '3px' }}></div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#A0AEC0', fontSize: '0.9rem', borderTop: '1px solid #262B38', paddingTop: '1rem' }}>
+                  <span>⏳ 1 MOT test</span>
+                  <span>Est: <strong>£70 — £150</strong> at local garage</span>
+                </div>
+              </div>
+
+              {/* COST SUMMARY BOX */}
+              <div style={{ background: 'rgba(232, 255, 0, 0.08)', borderRadius: '6px', border: '1px solid #E8FF00', padding: '2.5rem', marginBottom: '2.5rem', position: 'relative' }}>
+                <div style={{ fontSize: '0.85rem', color: '#E8FF00', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)' }}>
+                  ESTIMATED PRE-MOT REPAIR BUDGET
+                </div>
+                <div style={{ fontSize: '2.5rem', fontWeight: '900', color: '#FFFFFF', marginBottom: '0.5rem', fontFamily: 'var(--font-mono)' }}>
+                  £330 — £610
+                </div>
+                <p style={{ color: '#A0AEC0', fontSize: '0.9rem', margin: '0 0 1.25rem 0', lineHeight: '1.5' }}>
+                  Based on independent UK garage rates. Main official dealer rates are typically 30-40% higher.
+                </p>
+                <div style={{ color: '#E8FF00', fontWeight: '800', fontSize: '0.95rem' }}>
+                  💡 Negotiation Leverage: Use this forecasted budget range to reduce the seller's asking price.
+                </div>
+              </div>
+
+            </div>
           </div>
+
+          {/* HISTORICAL MOT HISTORY TABLE (Available to all users) */}
+          <div style={{ background: '#161922', borderRadius: '6px', border: '1px solid #262B38', padding: '2.5rem', marginBottom: '2.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', color: '#FFFFFF', marginBottom: '1.5rem' }}>
+              📋 Complete MOT History Timeline
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {motHistory?.map((test, index) => {
+                const isPass = test.test_result === 'PASSED';
+                return (
+                  <div key={index} style={{ borderBottom: index === motHistory.length - 1 ? 'none' : '1px solid #262B38', paddingBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 'bold', fontSize: '1.05rem' }}>
+                        {new Date(test.test_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <span style={{ background: '#0D0F14', color: '#A0AEC0', padding: '0.2rem 0.6rem', borderRadius: '2px', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                          {test.mileage?.toLocaleString()} miles
+                        </span>
+                        <span style={{
+                          background: isPass ? '#064E3B' : '#7F1D1D',
+                          color: isPass ? '#34D399' : '#F87171',
+                          padding: '0.2rem 0.6rem',
+                          borderRadius: '2px',
+                          fontSize: '0.75rem',
+                          fontWeight: '800'
+                        }}>
+                          {isPass ? 'PASS' : 'FAIL'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Defect listings */}
+                    {!isUnlocked ? (
+                      <div style={{ marginTop: '0.5rem', background: '#0D0F14', padding: '0.6rem 1rem', borderRadius: '4px', border: '1px dashed #262B38', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.85rem' }}>🔒</span>
+                        <span style={{ color: '#64748B', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                          {defects?.filter(d => d.test_number === test.test_number).length} advisories / defects hidden. <a href="#" onClick={(e) => { e.preventDefault(); setIsModalOpen(true); }} style={{ color: '#E8FF00', fontWeight: 'bold', textDecoration: 'underline' }}>Unlock Forensic Report</a> to view detailed failure items.
+                        </span>
+                      </div>
+                    ) : defects?.filter(d => d.test_number === test.test_number).length > 0 ? (
+                      <ul style={{ paddingLeft: '1.25rem', color: '#A0AEC0', fontSize: '0.85rem', margin: '0.5rem 0 0 0', lineHeight: '1.6' }}>
+                        {defects.filter(d => d.test_number === test.test_number).map((d, dIdx) => (
+                          <li key={dIdx} style={{ marginBottom: '0.25rem' }}>
+                            <strong style={{ color: d.defect_type === 'ADVISORY' ? '#3182CE' : '#F56565', textTransform: 'capitalize' }}>
+                              [{d.defect_type.toLowerCase()}]
+                            </strong>{' '}
+                            {d.defect_text}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p style={{ color: '#64748B', fontSize: '0.85rem', margin: '0.5rem 0 0 0', fontStyle: 'italic' }}>
+                        No defects or advisories logged for this test event.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* DISCLAIMER */}
+          <ReportDisclaimer />
+
         </div>
+      </main>
 
-      </div>
-      <Footer />
-
+      {/* Checkout Payment Modal */}
       <CheckoutModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onPaymentSuccess={() => setIsUnlocked(true)}
+        amount="2.99"
         registration={reg}
-        amount="9.99"
-        onPaymentSuccess={() => {
-          setIsUnlocked(true);
-          setIsModalOpen(false);
-          addNotification({
-            title: '🎉 Report Unlocked!',
-            message: 'Payment confirmed by Dodo Payments. Your full forensic report is now available.',
-            icon: '🛡️',
-          });
-        }}
       />
 
-      <div className="toast-container">
-        {notifications.map(n => (
-          <Toast
-            key={n.id}
-            title={n.title}
-            message={n.message}
-            icon={n.icon}
-            onClose={() => removeNotification(n.id)}
-          />
-        ))}
-      </div>
+      <Footer />
     </>
   );
 }

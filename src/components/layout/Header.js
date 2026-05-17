@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react';
 
 export default function Header() {
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
   const [contrast, setContrast] = useState('normal');
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('app-theme') || 'light';
+    const savedTheme = localStorage.getItem('app-theme') || 'dark';
     const savedContrast = localStorage.getItem('app-contrast') || 'normal';
     
     // Apply immediately to prevent flash
@@ -43,7 +43,7 @@ export default function Header() {
         <div className="header-inner">
           <div className="header-brand">
             <a href="/" className="logo">
-              <span className="logo-flag">🇬🇧</span> isthiscarsafe
+              <span className="logo-flag">🇬🇧</span> IsThisCarSafe
             </a>
             <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation">
               {menuOpen ? (
@@ -62,12 +62,12 @@ export default function Header() {
           </div>
           <nav className={`header-nav ${menuOpen ? 'open' : ''}`}>
             <ul className="nav">
-              <li><a href="/">Home</a></li>
-              <li><a href="/recalls">Recalls Database</a></li>
-              <li><a href="/dashboard">Dashboard</a></li>
-              <li><a href="/intelligence">Car Intelligence</a></li>
-              <li><a href="/about">About</a></li>
-              <li><a href="/" className="nav-cta">Check Vehicle</a></li>
+              <li><a href="/">Start Check</a></li>
+              <li><a href="/recalls">Safety Recalls</a></li>
+              <li><a href="/dashboard">My Garage</a></li>
+              <li><a href="/intelligence">AI Matchmaker</a></li>
+              <li><a href="/about">How It Works</a></li>
+              <li><a href="/" className="nav-cta">Reveal Future Failures</a></li>
             </ul>
             
             <div className="header-controls">

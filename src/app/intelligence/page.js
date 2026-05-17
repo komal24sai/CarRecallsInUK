@@ -302,7 +302,7 @@ export default function CarIntelligencePage() {
               {isThinking ? (
                 <div style={{ textAlign: 'center', padding: '8rem 0' }}>
                   <div className="spinner" style={{ width: '70px', height: '70px', borderTopColor: 'var(--accent-purple)', margin: '0 auto 2.5rem' }}></div>
-                  <h3 style={{ color: 'var(--text-secondary)', fontSize: '1.3rem', fontWeight: '500' }}>Matching criteria against the isthiscarsafe forensic database...</h3>
+                  <h3 style={{ color: 'var(--text-secondary)', fontSize: '1.3rem', fontWeight: '500' }}>Matching criteria against the IsThisCarSafe database...</h3>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
@@ -490,7 +490,7 @@ export default function CarIntelligencePage() {
               <div style={{ marginTop: '4rem', padding: '2.5rem', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '24px', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
                 <h3 style={{ fontSize: '1.4rem', fontWeight: '900', marginBottom: '1.25rem', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.6 8.5 8.5 0 0 1 7 3.9"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                   isthiscarsafe AI Final Verdict
+                   IsThisCarSafe AI Final Verdict
                 </h3>
                 <p style={{ margin: 0, lineHeight: '1.7', fontSize: '1.15rem', color: 'var(--text)', fontWeight: '500' }}>
                   Based on your requirements, if your primary goal is <strong>reliability and hassle-free ownership</strong>, the <strong>{comparedCars[0].reliability > comparedCars[1].reliability ? comparedCars[0].model : comparedCars[1].model}</strong> is the technically superior choice with its {Math.max(comparedCars[0].reliability, comparedCars[1].reliability)}% reliability score. 

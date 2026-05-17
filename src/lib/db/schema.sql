@@ -202,3 +202,31 @@ CREATE INDEX IF NOT EXISTS idx_silver_defects_reg ON silver_defects(registration
 CREATE INDEX IF NOT EXISTS idx_silver_defects_type ON silver_defects(defect_type);
 CREATE INDEX IF NOT EXISTS idx_silver_mileage_reg ON silver_mileage_timeline(registration);
 CREATE INDEX IF NOT EXISTS idx_gold_make_model ON gold_make_model_stats(make, model);
+
+-- =====================
+-- DEALER SYSTEM TABLES
+-- =====================
+
+CREATE TABLE IF NOT EXISTS dealers (
+    dealer_id TEXT PRIMARY KEY,
+    business_name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    plan TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    checks_used INTEGER DEFAULT 0,
+    checks_limit INTEGER NOT NULL,
+    subscription_id TEXT,
+    subscription_status TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS analytics_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_name TEXT NOT NULL,
+    event_metadata TEXT,
+    session_id TEXT,
+    ab_variant TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+
