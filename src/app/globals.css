@@ -2255,3 +2255,250 @@ img {
   }
 
 }
+
+/* =====================================================
+   1. THEME & ACCESSIBILITY BOTTOM BAR — mobile pages
+   Always visible at bottom of screen on mobile.
+   More prominent than the floating pill hub.
+   Appended only — zero changes to existing rules.
+   ===================================================== */
+.page-controls-bar {
+  display: none; /* hidden by default, shown on mobile below */
+}
+
+@media (max-width: 900px) {
+  .page-controls-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1090;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-color);
+    height: 52px;
+    padding: 0 1rem;
+  }
+
+  /* Each button takes equal width */
+  .page-controls-bar .pcb-btn {
+    flex: 1;
+    height: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: var(--transition);
+    -webkit-tap-highlight-color: transparent;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .page-controls-bar .pcb-btn:last-child {
+    border-right: none;
+  }
+
+  .page-controls-bar .pcb-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .page-controls-bar .pcb-btn:hover,
+  .page-controls-bar .pcb-btn:active {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+  }
+
+  /* Active state — light mode */
+  .page-controls-bar .pcb-btn.active {
+    color: var(--accent-blue);
+    background: rgba(29, 78, 216, 0.07);
+  }
+
+  /* Active state — dark mode */
+  [data-theme="dark"] .page-controls-bar .pcb-btn.active {
+    color: var(--accent-yellow);
+    background: rgba(232, 255, 0, 0.07);
+  }
+
+  /* High contrast active */
+  [data-contrast="high"] .page-controls-bar .pcb-btn.active {
+    color: var(--text-primary);
+    background: var(--border-color);
+  }
+
+  /* Push page content up so bar doesn't cover it */
+  body {
+    padding-bottom: 52px;
+  }
+
+  /* Don't double-stack padding if PTR is also active */
+  body.ptr-pulling {
+    padding-bottom: 52px;
+  }
+}
+
+/* =====================================================
+   2. PORTRAIT MODE — even tabs, buttons & grids
+   Targets portrait phones specifically.
+   Appended only — zero changes to existing rules.
+   ===================================================== */
+@media (max-width: 900px) and (orientation: portrait) {
+
+  /* ── Plate / hero buttons — full width stacked ── */
+  .plate-btn-group {
+    flex-direction: column !important;
+    gap: 0.75rem;
+  }
+
+  .btn-free,
+  .btn-paid {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  /* ── Metric cards — 2 even columns ── */
+  .metrics-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.65rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.65rem;
+  }
+
+  /* ── Action buttons — 2 even columns ── */
+  .action-buttons {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.65rem;
+  }
+
+  .action-btn {
+    min-height: 52px;
+    font-size: 0.78rem;
+    padding: 0.75rem 0.5rem;
+  }
+
+  /* ── Stats bar — 2 columns ── */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem;
+  }
+
+  /* ── AI sub-cards — single column ── */
+  .ai-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Features grid — single column ── */
+  .features-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Pipeline grid — single column ── */
+  .pipeline-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Details / info grids — single column ── */
+  .details-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Main vehicle grid — single column ── */
+  .main-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Vehicle grid ── */
+  .vehicle-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Nav tabs (if used) — wrap evenly ── */
+  .nav-tabs,
+  .tab-list,
+  [role="tablist"] {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .nav-tabs .tab,
+  .tab-list .tab,
+  [role="tab"] {
+    flex: 1 1 calc(50% - 0.4rem);
+    min-width: 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  /* ── Trust badges — wrap evenly ── */
+  .trust-badges {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .badge {
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* ── Timeline pills — wrap ── */
+  .timeline-pills {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  /* ── Vehicle tags — wrap ── */
+  .vehicle-tags {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  /* ── Score card — give it room ── */
+  .score-circle-container {
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── Footer links — stack ── */
+  .footer-links {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  /* ── Header inner — tighter padding in portrait ── */
+  .header-inner {
+    padding: 0 1rem !important;
+  }
+}
