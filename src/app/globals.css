@@ -2087,3 +2087,171 @@ img {
     display: none;
   }
 }
+
+/* =====================================================
+   FLOATING ACCESS HUB — always visible on all pages
+   Overrides the display:none !important at line 601.
+   Sits bottom-right, fixed, above all content.
+   Uses only variables already in :root.
+   Zero changes to any existing rule above.
+   ===================================================== */
+.access-hub {
+  display: flex !important;        /* override line 601 */
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 1100;                   /* above header (1000), modal (1000) */
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: 50px;
+  padding: 0.4rem 0.6rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* Hide on desktop — header-controls handles desktop */
+@media (min-width: 901px) {
+  .access-hub {
+    display: none !important;
+  }
+}
+
+/* Buttons inside the hub */
+.access-hub .ctrl-btn {
+  width: 34px;
+  height: 34px;
+  font-size: 0.9rem;
+  border-radius: 50%;              /* pill look matches the container */
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.access-hub .ctrl-btn:hover {
+  background: var(--bg-card-hover);
+  border: none;
+}
+
+.access-hub .ctrl-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+[data-theme="dark"] .access-hub .ctrl-btn.active {
+  background: var(--accent-yellow);
+  color: #000;
+}
+
+/* Thin divider between the two buttons */
+.access-hub .ctrl-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+/* Subtle hide when user scrolls — reappears on scroll stop.
+   Requires the JS scroll listener below (optional). */
+.access-hub.hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+/* =====================================================
+   PULL TO REFRESH — mobile only
+   Appended. Zero changes to any existing rule above.
+   ===================================================== */
+@media (max-width: 900px) {
+
+  .ptr-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    height: 56px;
+    color: var(--text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .ptr-indicator.ptr-visible {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .ptr-spinner {
+    display: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  [data-theme="dark"] .ptr-spinner {
+    border-top-color: var(--accent-yellow);
+  }
+
+  .ptr-indicator.ptr-refreshing .ptr-spinner {
+    display: block;
+    animation: ptr-spin 0.7s linear infinite;
+  }
+
+  .ptr-arrow {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+  }
+
+  .ptr-indicator.ptr-ready .ptr-arrow {
+    transform: rotate(180deg);
+    color: var(--accent-blue);
+  }
+
+  [data-theme="dark"] .ptr-indicator.ptr-ready .ptr-arrow {
+    color: var(--accent-yellow);
+  }
+
+  .ptr-indicator.ptr-refreshing .ptr-arrow {
+    display: none;
+  }
+
+  .ptr-label {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  @keyframes ptr-spin {
+    to { transform: rotate(360deg); }
+  }
+
+}
