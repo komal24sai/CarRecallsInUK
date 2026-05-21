@@ -72,7 +72,7 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          zIndex: 50,
+          zIndex: 1500,
           transition: 'transform 0.2s, box-shadow 0.2s',
           transform: isOpen ? 'scale(0.9)' : 'scale(1)',
         }}
@@ -85,9 +85,9 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
         <div style={{
           position: 'fixed',
           bottom: '6rem',
-          right: '2rem',
-          width: '380px',
-          height: '600px',
+          right: '1rem',
+          width: 'min(380px, calc(100vw - 2rem))',
+          height: 'min(600px, calc(100vh - 8rem))',
           maxHeight: '80vh',
           background: 'var(--bg-card)',
           border: '1px solid var(--border-color)',
@@ -95,7 +95,7 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
           boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 50,
+          zIndex: 1500,
           overflow: 'hidden',
           animation: 'slideUp 0.3s ease-out'
         }}>

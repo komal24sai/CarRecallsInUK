@@ -2,23 +2,27 @@
 import { useState, useEffect } from 'react';
 
 export default function Header() {
+  // Detect system preference on first load
+  const getSystemTheme = () =>
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
   const [theme, setTheme] = useState('dark');
   const [contrast, setContrast] = useState('normal');
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('app-theme') || 'dark';
+    // Use saved preference; fall back to OS preference
+    const savedTheme = localStorage.getItem('app-theme') || getSystemTheme();
     const savedContrast = localStorage.getItem('app-contrast') || 'normal';
-    
-    // Apply immediately to prevent flash
+
     setTheme(savedTheme);
     setContrast(savedContrast);
-    
+
     const root = document.documentElement;
     root.setAttribute('data-theme', savedTheme);
     root.setAttribute('data-contrast', savedContrast);
-    
-    // Add a class for transitions after initial load
+
+    // Add transition class after initial paint to avoid flash
     setTimeout(() => root.classList.add('theme-ready'), 100);
   }, []);
 
@@ -62,14 +66,15 @@ export default function Header() {
           </div>
           <nav className={`header-nav ${menuOpen ? 'open' : ''}`}>
             <ul className="nav">
-              <li><a href="/">Start Check</a></li>
-              <li><a href="/recalls">Safety Recalls</a></li>
-              <li><a href="/dashboard">My Garage</a></li>
-              <li><a href="/intelligence">AI Matchmaker</a></li>
-              <li><a href="/about">How It Works</a></li>
-              <li><a href="/" className="nav-cta">Reveal Future Failures</a></li>
+              <li><a href="/" onClick={() => setMenuOpen(false)}>Start Check</a></li>
+              <li><a href="/recalls" onClick={() => setMenuOpen(false)}>Safety Recalls</a></li>
+              <li><a href="/dashboard" onClick={() => setMenuOpen(false)}>My Garage</a></li>
+              <li><a href="/intelligence" onClick={() => setMenuOpen(false)}>AI Matchmaker</a></li>
+              <li><a href="/about" onClick={() => setMenuOpen(false)}>How It Works</a></li>
+              <li><a href="/" className="nav-cta" onClick={() => setMenuOpen(false)}>Reveal Future Failures</a></li>
             </ul>
-            
+
+            {/* Theme & Accessibility controls — shown inside mobile menu AND desktop header-controls */}
             <div className="header-controls">
               {/* Compact Quick Plate Search */}
               <div style={{
@@ -127,19 +132,39 @@ export default function Header() {
                 />
               </div>
 
-              <button 
+              <button
                 className={`hub-btn ${theme === 'dark' ? 'active' : ''}`}
-                onClick={toggleTheme} 
+                onClick={toggleTheme}
                 title="Toggle Dark Mode"
                 style={{ width: '36px', height: '36px', fontSize: '1rem' }}
               >
                 {theme === 'light' ? '🌙' : '☀️'}
               </button>
-              <button 
+              <button
                 className={`hub-btn ${contrast === 'high' ? 'active' : ''}`}
-                onClick={toggleContrast} 
+                onClick={toggleContrast}
                 title="Toggle High Contrast"
                 style={{ width: '36px', height: '36px', fontSize: '1rem' }}
+              >
+                👁️
+              </button>
+            </div>
+
+            {/* Mobile-only: theme controls visible inside the open nav overlay */}
+            <div className="mobile-nav-controls">
+              <button
+                className={`hub-btn ${theme === 'dark' ? 'active' : ''}`}
+                onClick={toggleTheme}
+                aria-label="Toggle Dark Mode"
+                style={{ width: '52px', height: '52px', fontSize: '1.4rem' }}
+              >
+                {theme === 'light' ? '🌙' : '☀️'}
+              </button>
+              <button
+                className={`hub-btn ${contrast === 'high' ? 'active' : ''}`}
+                onClick={toggleContrast}
+                aria-label="Toggle High Contrast"
+                style={{ width: '52px', height: '52px', fontSize: '1.4rem' }}
               >
                 👁️
               </button>
@@ -148,19 +173,19 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Accessibility Hub - Floating for easy reach */}
+      {/* Mobile Floating Access Hub — bottom-LEFT (AI Agent FAB is bottom-RIGHT) */}
       <div className="access-hub">
-        <button 
+        <button
           className={`hub-btn ${theme === 'dark' ? 'active' : ''}`}
           onClick={toggleTheme}
-          aria-label="Toggle Dark Mode"
+          aria-label={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
         >
           {theme === 'light' ? '🌙' : '☀️'}
         </button>
-        <button 
+        <button
           className={`hub-btn ${contrast === 'high' ? 'active' : ''}`}
           onClick={toggleContrast}
-          aria-label="Toggle High Contrast"
+          aria-label={contrast === 'high' ? 'Turn off High Contrast' : 'Turn on High Contrast'}
         >
           👁️
         </button>

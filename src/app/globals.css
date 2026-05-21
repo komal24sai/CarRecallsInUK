@@ -63,33 +63,72 @@
   --shadow-glow: 0 0 15px rgba(29, 78, 216, 0.2);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Dark terminal authoritative design system with safety yellow */
-    --bg-primary: #0D0F14;
-    --bg-secondary: #12151C;
-    --bg-card: #161922;
-    --bg-card-hover: #202532;
-    --border-color: #262B38;
-    --border-glass: rgba(232, 255, 0, 0.15);
-    --bg-glass: rgba(13, 15, 20, 0.95);
-    --gradient-card: linear-gradient(135deg, #161922, #0E1016);
-    --gradient-accent: linear-gradient(135deg, #E8FF00, #C2D600);
+[data-theme="dark"] {
+  /* Dark terminal authoritative design system with safety yellow */
+  --bg-primary: #0D0F14;
+  --bg-secondary: #12151C;
+  --bg-card: #161922;
+  --bg-card-hover: #202532;
+  --border-color: #262B38;
+  --border-glass: rgba(232, 255, 0, 0.15);
+  --bg-glass: rgba(13, 15, 20, 0.95);
+  --gradient-card: linear-gradient(135deg, #161922, #0E1016);
+  --gradient-accent: linear-gradient(135deg, #E8FF00, #C2D600);
 
-    --text-primary: #FFFFFF;
-    --text-secondary: #A0AEC0;
-    --text-muted: #64748B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0AEC0;
+  --text-muted: #64748B;
 
-    --accent-blue: #3182CE;
-    --accent-purple: #9F7AEA;
-    --accent-green: #48BB78;
-    --accent-red: #F56565;
-    --accent-yellow: #E8FF00; /* Sharp safety yellow */
-    --accent-amber: #ED8936;
+  --accent-blue: #3182CE;
+  --accent-purple: #9F7AEA;
+  --accent-green: #48BB78;
+  --accent-red: #F56565;
+  --accent-yellow: #E8FF00; /* Sharp safety yellow */
+  --accent-amber: #ED8936;
 
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-    --shadow-glow: 0 0 15px rgba(232, 255, 0, 0.2);
-  }
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 15px rgba(232, 255, 0, 0.2);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+[data-contrast="high"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --border-color: #000000;
+  --border-glass: #000000;
+  --text-primary: #000000;
+  --text-secondary: #000000;
+  --text-muted: #000000;
+
+  --accent-blue: #0000ee;
+  --accent-purple: #800080;
+  --accent-green: #006600;
+  --accent-red: #cc0000;
+  --accent-yellow: #8b4500;
+
+  --shadow-lg: none;
+  --shadow-glow: none;
+}
+
+[data-theme="dark"][data-contrast="high"] {
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --bg-card: #000000;
+  --border-color: #ffffff;
+  --border-glass: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-muted: #ffffff;
+
+  --accent-blue: #66b3ff;
+  --accent-purple: #e6a8d7;
+  --accent-green: #00ff00;
+  --accent-red: #ff3333;
+  --accent-yellow: #ffcc00;
 }
 
 *,
@@ -285,27 +324,50 @@ a {
     display: none;
   }
 
+  /* Theme controls shown inside the open hamburger menu */
+  .mobile-nav-controls {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+  }
+
   .logo {
     font-size: 1.25rem;
     z-index: 1001;
   }
 }
 
+/* Hide mobile-nav-controls on desktop */
+.mobile-nav-controls {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .mobile-nav-controls {
+    display: none !important;
+  }
+}
+
 /* Floating Accessibility Hub (Premium Mobile UX) */
+/* Placed on the LEFT so it never overlaps the AI Agent FAB on the right */
 .access-hub {
   position: fixed;
   bottom: 2rem;
-  right: 1.5rem;
+  left: 1.25rem;
   z-index: 2000;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
   animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hub-btn {
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -328,6 +390,21 @@ a {
   background: var(--accent-purple);
   color: white;
   border-color: var(--accent-purple);
+}
+
+/* Landscape mode on phones: shrink buttons and go horizontal */
+@media (max-width: 900px) and (orientation: landscape) {
+  .access-hub {
+    flex-direction: row;
+    bottom: 1rem;
+    left: 1rem;
+    gap: 0.5rem;
+  }
+  .hub-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
 }
 
 @media (min-width: 769px) {
