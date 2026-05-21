@@ -21,10 +21,6 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
 
   const handleSend = async (text = input) => {
     if (!text.trim()) return;
-    if (!isUnlocked) {
-      onUnlockClick?.();
-      return;
-    }
 
     const userMsg = { role: 'user', text };
     setMessages(prev => [...prev, userMsg]);
@@ -35,7 +31,7 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
       const res = await fetch('/api/ai-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, context })
+        body: JSON.stringify({ message: text, context, isUnlocked })
       });
       
       const data = await res.json();
@@ -53,9 +49,9 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
   };
 
   const quickPrompts = [
-    "What is the biggest risk with this car?",
+    "Summarize the MOT history",
     "Is the asking price fair?",
-    "What should I ask the dealer?"
+    "What are the repair costs?"
   ];
 
   return (
@@ -116,7 +112,17 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
               <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#48BB78', boxShadow: '0 0 10px #48BB78' }}></div>
               <h3 style={{ margin: 0, fontFamily: 'var(--font-heading)', fontSize: '1.1rem', color: 'var(--text-primary)' }}>AI Forensic Agent</h3>
             </div>
-            <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {!isUnlocked && (
+                <button 
+                  onClick={onUnlockClick}
+                  style={{ background: 'var(--accent-yellow)', color: '#000', border: 'none', borderRadius: '4px', fontSize: '0.75rem', padding: '0.3rem 0.6rem', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Unlock Premium
+                </button>
+              )}
+              <button onClick={() => setIsOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+            </div>
           </div>
 
           {/* Messages Area */}
@@ -129,42 +135,7 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
             gap: '1rem',
             position: 'relative'
           }}>
-            {/* Paywall Blur Layer */}
-            {!isUnlocked && (
-              <div style={{
-                position: 'absolute',
-                top: 0, left: 0, right: 0, bottom: 0,
-                background: 'rgba(13,15,20,0.6)',
-                backdropFilter: 'blur(4px)',
-                zIndex: 10,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '2rem',
-                textAlign: 'center'
-              }}>
-                <span style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔒</span>
-                <h4 style={{ color: '#FFF', margin: '0 0 0.5rem 0', fontFamily: 'var(--font-heading)', fontSize: '1.2rem' }}>AI Agent Locked</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
-                  Unlock the full report to ask the AI specific questions about this vehicle's history, value, and hidden risks.
-                </p>
-                <button 
-                  onClick={onUnlockClick}
-                  style={{
-                    background: 'var(--accent-yellow)',
-                    color: '#000',
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '4px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Unlock Full Report
-                </button>
-              </div>
-            )}
+
 
             {messages.map((msg, idx) => (
               <div key={idx} style={{
@@ -193,7 +164,7 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
           </div>
 
           {/* Quick Prompts */}
-          <div style={{ padding: '0 1.25rem 0.5rem 1.25rem', display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none', filter: isUnlocked ? 'none' : 'blur(2px)' }}>
+          <div style={{ padding: '0 1.25rem 0.5rem 1.25rem', display: 'flex', gap: '0.5rem', overflowX: 'auto', scrollbarWidth: 'none' }}>
             {quickPrompts.map((prompt, idx) => (
               <button 
                 key={idx}
@@ -206,11 +177,11 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
                   borderRadius: '16px',
                   fontSize: '0.8rem',
                   whiteSpace: 'nowrap',
-                  cursor: isUnlocked ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'background 0.2s, color 0.2s'
                 }}
-                onMouseOver={e => isUnlocked && (e.currentTarget.style.color = 'var(--accent-yellow)')}
-                onMouseOut={e => isUnlocked && (e.currentTarget.style.color = 'var(--text-secondary)')}
+                onMouseOver={e => e.currentTarget.style.color = 'var(--accent-yellow)'}
+                onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}
               >
                 {prompt}
               </button>
@@ -224,7 +195,7 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
-              disabled={!isUnlocked || isLoading}
+              disabled={isLoading}
               placeholder="Ask about this vehicle..."
               style={{
                 flex: 1,
@@ -233,13 +204,12 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
                 color: 'var(--text-primary)',
                 padding: '0.75rem 1rem',
                 borderRadius: '6px',
-                outline: 'none',
-                opacity: isUnlocked ? 1 : 0.5
+                outline: 'none'
               }}
             />
             <button 
               onClick={() => handleSend()}
-              disabled={!isUnlocked || isLoading || !input.trim()}
+              disabled={isLoading || !input.trim()}
               style={{
                 background: 'var(--accent-yellow)',
                 border: 'none',
@@ -248,8 +218,8 @@ export default function AIChatAgent({ isUnlocked, context, onUnlockClick }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: (isUnlocked && input.trim()) ? 'pointer' : 'not-allowed',
-                opacity: (isUnlocked && input.trim()) ? 1 : 0.5
+                cursor: (input.trim()) ? 'pointer' : 'not-allowed',
+                opacity: (input.trim()) ? 1 : 0.5
               }}
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
