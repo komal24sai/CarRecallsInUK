@@ -1603,7 +1603,6 @@ export default function VehiclePage({ params }) {
         context={{
           vehicle,
           safetyScore,
-          marketComparison,
           provenance,
           defects
         }}
