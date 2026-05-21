@@ -1602,6 +1602,7 @@ export default function VehiclePage({ params }) {
         isUnlocked={isUnlocked}
         context={{
           vehicle,
+          specification: data.specification,
           safetyScore,
           provenance,
           defects

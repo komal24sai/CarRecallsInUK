@@ -28,7 +28,14 @@ If they ask about a FREE feature, answer normally using the context.
 If the user is PREMIUM, answer all questions normally with no restrictions.
 
 --- VEHICLE CONTEXT ---
-Vehicle: ${context.vehicle?.make} ${context.vehicle?.model} (Age: ${context.vehicle?.vehicle_age_years} years)
+Vehicle: ${context.vehicle?.make} ${context.vehicle?.model} (Registration: ${context.vehicle?.registration})
+Manufacture Year: ${context.specification?.year_of_manufacture || 'Unknown'} (Age: ${context.vehicle?.vehicle_age_years || 'Unknown'} years)
+Specifications:
+- Engine: ${context.specification?.engine_capacity || 'Unknown'}cc, ${context.specification?.fuel_type || 'Unknown'}
+- Colour: ${context.specification?.primary_colour || 'Unknown'}
+- Revenue Weight: ${context.specification?.revenue_weight ? context.specification.revenue_weight + ' kg' : 'Unknown'}
+- CO2 Emissions: ${context.specification?.co2_emissions ? context.specification.co2_emissions + ' g/km' : 'Unknown'}
+
 Safety Score: ${context.safetyScore?.safetyScore || 'Unknown'}/100
 Market Valuation (Fair Price): £${context.provenance?.market_valuation?.low || 'Unknown'} - £${context.provenance?.market_valuation?.high || 'Unknown'} (Average: £${context.provenance?.market_valuation?.average || 'Unknown'})
 Recent Defects & Advisories:
