@@ -2048,3 +2048,42 @@ img {
   gap: 0.5rem;
   align-items: center;
 }
+
+/* =====================================================
+   MOBILE TOGGLE VISIBILITY FIX
+   Problem: .header-controls is display:none on mobile
+   (set at line 571). Buttons only appear inside the
+   hamburger overlay, not in the visible header bar.
+   Fix: override that rule, strip the desktop border,
+   shrink buttons to fit the 72px mobile header, and
+   bump z-index so they sit above the nav overlay.
+   Zero changes to any existing rule above.
+   ===================================================== */
+@media (max-width: 900px) {
+  .header-controls {
+    display: flex !important;    /* override the display:none at line 571 */
+    border-left: none;           /* desktop separator not needed on mobile */
+    padding-left: 0;
+    gap: 0.4rem;
+    align-items: center;
+    z-index: 1002;               /* above header-nav overlay (z-index: 999) */
+    position: relative;          /* keeps it in normal header-inner flow */
+  }
+
+  /* Compact button size for 72px header bar */
+  .header-controls .ctrl-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.82rem;
+  }
+
+  /* Compact divider between buttons */
+  .header-controls .ctrl-divider {
+    height: 16px;
+  }
+
+  /* Hide tooltip text on mobile — too small to be useful */
+  .header-controls .ctrl-btn[data-tooltip]::before {
+    display: none;
+  }
+}
