@@ -1905,3 +1905,146 @@ img {
   max-width: 100%;
   height: auto;
 }
+
+/* =====================================================
+   THEME & ACCESSIBILITY TOGGLES
+   Appended — zero changes to existing rules above.
+   Uses only variables already defined in :root.
+   Works inside .header-controls (desktop) and
+   .mobile-nav-controls (hamburger menu on mobile).
+   ===================================================== */
+
+/* Base control button */
+.ctrl-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.ctrl-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.ctrl-btn:focus-visible {
+  outline: 3px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* Active state — light mode (blue tint) */
+.ctrl-btn.active {
+  background: var(--accent-blue);
+  color: #ffffff;
+  border-color: var(--accent-blue);
+}
+
+/* Active state — dark mode (safety yellow) */
+[data-theme="dark"] .ctrl-btn.active {
+  background: var(--accent-yellow);
+  color: #000000;
+  border-color: var(--accent-yellow);
+}
+
+/* Active state — high contrast override */
+[data-contrast="high"] .ctrl-btn.active {
+  background: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+
+[data-theme="dark"][data-contrast="high"] .ctrl-btn.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+/* Icon inside the button — SVG or emoji */
+.ctrl-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+/* Tooltip label on hover (reuses existing tooltip pattern) */
+.ctrl-btn[data-tooltip]::before {
+  font-size: 0.7rem;
+  white-space: nowrap;
+  width: max-content;
+  bottom: calc(100% + 6px);
+}
+
+/* Divider between toggle groups */
+.ctrl-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ── Mobile toggle row inside hamburger menu ── */
+.mobile-nav-controls .ctrl-btn {
+  width: 44px;   /* larger tap target on mobile */
+  height: 44px;
+  font-size: 1.15rem;
+}
+
+.mobile-nav-controls .ctrl-divider {
+  height: 24px;
+}
+
+/* Label text next to buttons (optional, shown only on mobile menu) */
+.ctrl-label {
+  display: none;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  .mobile-nav-controls .ctrl-label {
+    display: block;
+  }
+
+  /* Stack label above buttons in mobile nav */
+  .mobile-nav-controls {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .mobile-nav-controls .ctrl-group {
+    display: flex;
+    flex-direction: row;
+    gap: 0.75rem;
+    align-items: center;
+  }
+}
+
+/* Group wrapper — keeps theme buttons together */
+.ctrl-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
