@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer';
 import CheckoutModal from '@/components/payment/CheckoutModal';
 import ReportDisclaimer from '@/components/layout/ReportDisclaimer';
 import { generateAIReport } from '@/lib/ai-forecast';
+import AIChatAgent from '@/components/ui/AIChatAgent';
 
 export default function VehiclePage({ params }) {
   const { reg } = use(params);
@@ -1595,6 +1596,19 @@ export default function VehiclePage({ params }) {
           </div>
         </div>
       )}
+
+      {/* AI Forensic Chat Agent Widget */}
+      <AIChatAgent 
+        isUnlocked={isUnlocked}
+        context={{
+          vehicle,
+          safetyScore,
+          marketComparison,
+          provenance,
+          defects
+        }}
+        onUnlockClick={() => setIsModalOpen(true)}
+      />
 
       {/* Checkout Payment Modal */}
       <CheckoutModal
