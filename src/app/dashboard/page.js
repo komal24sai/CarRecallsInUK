@@ -8,7 +8,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+    let storedSearches = [];
+    try {
+      storedSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+    } catch (e) {
+      console.warn('Could not read recent searches from localStorage:', e);
+    }
     
     if (storedSearches.length === 0) {
       setLoading(false);

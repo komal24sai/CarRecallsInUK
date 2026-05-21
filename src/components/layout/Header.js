@@ -3,17 +3,28 @@ import { useState, useEffect } from 'react';
 
 export default function Header() {
   // Detect system preference on first load
-  const getSystemTheme = () =>
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const getSystemTheme = () => {
+    try {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch (e) {
+      return 'dark';
+    }
+  };
 
   const [theme, setTheme] = useState('dark');
   const [contrast, setContrast] = useState('normal');
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    // Use saved preference; fall back to OS preference
-    const savedTheme = localStorage.getItem('app-theme') || getSystemTheme();
-    const savedContrast = localStorage.getItem('app-contrast') || 'normal';
+    let savedTheme = 'dark';
+    let savedContrast = 'normal';
+    try {
+      savedTheme = localStorage.getItem('app-theme') || getSystemTheme();
+      savedContrast = localStorage.getItem('app-contrast') || 'normal';
+    } catch (e) {
+      savedTheme = document.documentElement.getAttribute('data-theme') || getSystemTheme();
+      savedContrast = document.documentElement.getAttribute('data-contrast') || 'normal';
+    }
 
     setTheme(savedTheme);
     setContrast(savedContrast);
@@ -28,13 +39,17 @@ export default function Header() {
 
   const applyTheme = (newTheme) => {
     setTheme(newTheme);
-    localStorage.setItem('app-theme', newTheme);
+    try {
+      localStorage.setItem('app-theme', newTheme);
+    } catch (e) {}
     document.documentElement.setAttribute('data-theme', newTheme);
   };
 
   const applyContrast = (newContrast) => {
     setContrast(newContrast);
-    localStorage.setItem('app-contrast', newContrast);
+    try {
+      localStorage.setItem('app-contrast', newContrast);
+    } catch (e) {}
     document.documentElement.setAttribute('data-contrast', newContrast);
   };
 
@@ -173,23 +188,6 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Mobile Floating Access Hub — bottom-LEFT (AI Agent FAB is bottom-RIGHT) */}
-      <div className="access-hub">
-        <button
-          className={`hub-btn ${theme === 'dark' ? 'active' : ''}`}
-          onClick={toggleTheme}
-          aria-label={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-        >
-          {theme === 'light' ? '🌙' : '☀️'}
-        </button>
-        <button
-          className={`hub-btn ${contrast === 'high' ? 'active' : ''}`}
-          onClick={toggleContrast}
-          aria-label={contrast === 'high' ? 'Turn off High Contrast' : 'Turn on High Contrast'}
-        >
-          👁️
-        </button>
-      </div>
     </>
   );
 }
